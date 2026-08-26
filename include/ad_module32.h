@@ -47,8 +47,12 @@ typedef struct tagAD_MODULE32
     /* +0x00C */ DWORD     dwReserved00C;
     /* +0x010 */ HWND      hWnd;              /* window the module draws into */
     /* +0x014 */ HINSTANCE hModule;           /* HMODULE of the .AD itself    */
-    /* +0x018 */ HANDLE    hHostContext;      /* host/engine context; the first
-                                                 field every module reads     */
+    /* +0x018 */ HDC       hDC;               /* device context the module draws
+                                                 into. The first field every
+                                                 module reads; passed straight
+                                                 to SetViewportOrgEx. This is
+                                                 AD3's hDrawDC argument, moved
+                                                 into the block.              */
     /* +0x01C */ RECT      rcDemo;            /* preview/demo rect (inferred) */
     /* +0x02C */ RECT      rcClient;          /* GetClientRect(hWnd, &rcClient) */
     /* +0x03C */ DWORD     dwReserved03C;

@@ -83,7 +83,7 @@ version field. A host should set it exactly.
 | `+0x008` | DWORD | Output flags, module → host. Host re-reads after every call and splits bits 0/1/2 into its own state | **confirmed** (`0x402415`–`0x402437`) |
 | `+0x010` | HWND | Target window | **confirmed** — passed as arg 1 to `GetClientRect` at `0x402141` |
 | `+0x014` | HINSTANCE | `HMODULE` of the loaded `.AD` | **confirmed** (`0x40235b`, from `LoadLibrary`) |
-| `+0x018` | handle | Host/engine context. **The first thing every module reads** | **confirmed** (`0x41e4df`, `0x428073`) |
+| `+0x018` | HDC | **Device context the module draws into.** The first thing every module reads, and passed straight to `SetViewportOrgEx` — so it is a GDI DC, not an opaque engine handle. This is AD3's `hDrawDC` argument, relocated into the block | **confirmed** (`0x41e4df` reads it, `0x41e4fb` calls `SetViewportOrgEx(hDC,0,0,&pt)`) |
 | `+0x01C` | RECT | Copied verbatim from a host global (`0x4130c8`); the preview/demo rect | confirmed copy; **name inferred** |
 | `+0x02C` | RECT | Client rect — `GetClientRect(hwnd, block+0x2C)` | **confirmed** (`0x402141`) |
 | `+0x03C` | DWORD | Set from a caller argument | confirmed write; meaning unknown |
@@ -207,11 +207,21 @@ the calling convention, the argument count, the block size and its `cbSize`
 field, the control array, the message and parameter offsets, the full message
 numbering, the lifecycle order, and the restart return code.
 
-Inferred, and worth verifying at runtime: the exact semantics of `+0x018`
-(read first by every module, so a spike will surface any mistake immediately),
-the meaning of the `+0x004` mode bits, which rect is which, and the length of
-the `+0x050` string buffer.
+Inferred, and worth verifying at runtime: the meaning of the `+0x004` mode
+bits, which rect is which, and the length of the `+0x050` string buffer.
 
-The remaining risk is no longer "can this be called at all" but "does the
-engine need state only `AFTERDAR.SCR` sets up". `+0x018` is where that would
-bite, and it is the first thing to test.
+`+0x018` was the field most likely to hide a dependency on host state, and it
+turned out to be the most mundane thing possible: a GDI device context. The
+module reads it and calls `SetViewportOrgEx` on it.
+
+**All of the above has since been confirmed by execution.** A host built to
+this document ([`host/`](../host/)) drives `TOASTERS.AD` and `BADDOG.AD`
+through the full lifecycle — every message returning `AD_OK` — and both render
+their real artwork into an offscreen DIB the host supplies as `+0x18`. Control
+values written to `+0x40` visibly change module behaviour. The engine's
+`SetUpModuleIdentity` / `SetUpMiscStatics` are satisfied by a correctly filled
+block; no hidden host state was needed.
+
+That run was under Wine 9.0 rather than Windows 11 — real modules, real
+engine, real Win32 API, but not the final target. The ABI is settled; a
+Windows 11 run remains the last confirmation.

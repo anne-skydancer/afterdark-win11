@@ -6,14 +6,16 @@ application, in which every module is properly configurable.
 
 ## Where this stands
 
-Feasibility is settled, the configuration layer is built, and the module ABI
-has been recovered by disassembly — the one unknown that gated a native host.
-What remains is the Windows app itself.
+Feasibility is settled, the module ABI has been recovered by disassembly, and
+**a working host now renders real After Dark 4 modules** — Flying Toasters and
+Bad Dog both run, with their settings taking effect. What remains is the
+Windows app around it.
 
 | Document | What it covers |
 |---|---|
 | [docs/FEASIBILITY.md](docs/FEASIBILITY.md) | Verdict and evidence: module ABI, engine dependency, what Windows 11 can and cannot load |
 | [docs/DESIGN.md](docs/DESIGN.md) | The application: architecture, per-module configuration, screensaver registration without registry hacks |
+| [host/README.md](host/README.md) | `admhost32` — a working 32-bit host that loads and renders real modules |
 | [docs/ABI.md](docs/ABI.md) | The AD4 module ABI, recovered by disassembly: entry point, 348-byte parameter block, message numbering, lifecycle |
 | [docs/REWRITES.md](docs/REWRITES.md) | The 61 16-bit Classic modules, and how to bring them forward as 32-bit rewrites |
 

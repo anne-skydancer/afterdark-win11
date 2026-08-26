@@ -227,7 +227,7 @@ Each stage ships something usable on its own.
 6. **Classic coverage** — OTVDM experiment and/or native rewrites
    (see [REWRITES.md](REWRITES.md)).
 
-### The gate on stage 2 is now open
+### Stage 2 is done, not just unblocked
 
 `AD_MODULE32`'s layout was the one undocumented thing standing between this
 plan and a working host. It has been recovered — see **[ABI.md](ABI.md)** for
@@ -250,10 +250,19 @@ The original host's frame loop is a `GetTickCount`-bounded spin that sends
 `DRAWFRAME` as fast as it can. That confirms §5's pacing problem from the
 binary rather than from inference: a modern host must supply its own clock.
 
-What stage 2 still has to prove is not "can a module be called" but "does the
-engine need state only `AFTERDAR.SCR` establishes". Block offset `+0x18`, a
-host context handle that every module reads before anything else, is where
-that would surface — and it fails loudly, not subtly.
+`+0x18` — the field most likely to hide a dependency on host state — turned out
+to be a plain `HDC`. A host hands the module a DC for an offscreen DIB and it
+draws into it. [`host/admhost32.c`](../host/admhost32.c) does exactly that and
+both test modules render correctly, so the engine needs no state beyond a
+properly filled block.
+
+Two things the spike changed in this design:
+
+- **Install the module's own palette.** Modules carry a `LOGPALETTE` in a `PAL`
+  resource; without `SetDIBColorTable` from it you get a correct image in wrong
+  colours. §5's palette row is now a concrete procedure, not a plan.
+- **Sound starts at `PREINITIALIZE`,** not at first frame. The audio path needs
+  a decision early in host startup.
 
 ## 8. Ground rules
 

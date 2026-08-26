@@ -18,6 +18,7 @@ typedef uint32_t DWORD;
 typedef uint32_t HWND;
 typedef uint32_t HINSTANCE;
 typedef uint32_t HANDLE;
+typedef uint32_t HDC;
 typedef int32_t  LONG;
 typedef struct { LONG left, top, right, bottom; } RECT;
 
@@ -49,7 +50,7 @@ int main(void)
     CHECK(dwModuleFlags,  0x008);
     CHECK(hWnd,           0x010);
     CHECK(hModule,        0x014);
-    CHECK(hHostContext,   0x018);
+    CHECK(hDC,            0x018);
     CHECK(rcDemo,         0x01C);
     CHECK(rcClient,       0x02C);
     CHECK(iControlValue,  0x040);
