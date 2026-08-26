@@ -57,13 +57,22 @@ bounded aspect-preserving size and scaled by the host for smooth 4K output.
 Every generated module carries an `AD_REWRITE` marker resource, so the host can
 apply that policy even when `ADXPL510.DLL` is present in the same installation.
 
+The fourth batch adds three more asset-free particle modules:
+
+- `RAIN32.AD` preserves drop count, drop size, and Clear Screen Frequently
+	while drawing slanted multicolor rain with optional trails.
+- `SPOT32.AD` preserves exact discrete Size stops, Speed, and Spots while
+	moving independently colored spotlights around the surface.
+- `DRAINO32.AD` preserves Speed, Direction, Drops, and Show Drain while drawing
+	particles spiraling into a visible drain.
+
 Build it with:
 
 ```sh
 make rewrite
 ```
 
-The eleven results are written below `dist/rewrites`. The build generates the
+The fourteen results are written below `dist/rewrites`. The build generates the
 documented control-definition resources, compiles them with `windres`, and
 links self-contained x86 DLLs. They do not need `ADXPL510.DLL` or the original
 16-bit modules. `make dist` builds them, and future installer builds place them

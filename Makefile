@@ -92,6 +92,21 @@ rewrite: prepare-dist
 	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
 		-o $(DIST)/rewrites/STRANGE32.AD rewrites/strange32.c rewrites/admkit.c \
 		$(DIST)/rewrite-build/strange32-res.o -lgdi32 -lm
+	$(WINDRES) $(DIST)/rewrite-build/rain32.rc \
+		-O coff -o $(DIST)/rewrite-build/rain32-res.o
+	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
+		-o $(DIST)/rewrites/RAIN32.AD rewrites/rain32.c rewrites/admkit.c \
+		$(DIST)/rewrite-build/rain32-res.o -lgdi32 -lm
+	$(WINDRES) $(DIST)/rewrite-build/spot32.rc \
+		-O coff -o $(DIST)/rewrite-build/spot32-res.o
+	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
+		-o $(DIST)/rewrites/SPOT32.AD rewrites/spot32.c rewrites/admkit.c \
+		$(DIST)/rewrite-build/spot32-res.o -lgdi32 -lm
+	$(WINDRES) $(DIST)/rewrite-build/draino32.rc \
+		-O coff -o $(DIST)/rewrite-build/draino32-res.o
+	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
+		-o $(DIST)/rewrites/DRAINO32.AD rewrites/draino32.c rewrites/admkit.c \
+		$(DIST)/rewrite-build/draino32-res.o -lgdi32 -lm
 
 prepare-dist:
 	$(PYTHON) -c "from pathlib import Path; Path('$(DIST)').mkdir(parents=True, exist_ok=True)"

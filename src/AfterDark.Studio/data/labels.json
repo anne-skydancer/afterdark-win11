@@ -11,5 +11,7 @@
   "STRING32.AD/3": "Clear Screen Frequently",
   "PHOTON.AD/2":   "Always Centered",
   "PHOTON32.AD/2": "Always Centered",
+  "RAIN.AD/3":     "Clear Screen Frequently",
+  "RAIN32.AD/3":   "Clear Screen Frequently",
   "MESSAGES.AD/0": "Message Speed"
 }

@@ -226,12 +226,16 @@ first — that is cheap, and it will move some modules between tiers.*
   `STRANGE32.AD` add accumulated string art, persistent particle bursts, and
   nonlinear attractors. Timed controls use wall-clock durations and the host
   bounds engine-free render surfaces before scaling to 4K presentation.
-6. **Build the asset pipeline against one Tier 2 module.** `BORIS` is a good
+6. **Add moving particle modules. Done.** `RAIN32.AD`, `SPOT32.AD`, and
+  `DRAINO32.AD` add slanted rain, independently moving spotlights, and a
+  configurable drain spiral. Their original modules contain no artwork or
+  sound resources, and all controls match field-for-field.
+7. **Build the asset pipeline against one Tier 2 module.** `BORIS` is a good
   target: two controls, recovered above, and a recognisable result that makes
   fidelity easy to judge.
-7. **Then breadth.** With runtime and pipeline done, Tier 1 becomes a
+8. **Then breadth.** With runtime and pipeline done, Tier 1 becomes a
    production line and Tier 2 becomes routine.
-8. **Tier 3 only by demand.** Each is a bespoke project; pick the ones people
+9. **Tier 3 only by demand.** Each is a bespoke project; pick the ones people
    actually miss.
 
 A reasonable v1 target is Tier 1 plus a handful of beloved Tier 2 modules —
@@ -276,6 +280,9 @@ admhost32 dist/rewrites dist/rewrites/STAINED32.AD --frames 20 --controls 10,100
 admhost32 dist/rewrites dist/rewrites/STRING32.AD --frames 20 --controls 2,87,96,0
 admhost32 dist/rewrites dist/rewrites/PHOTON32.AD --frames 40 --controls 58,0,1,0
 admhost32 dist/rewrites dist/rewrites/STRANGE32.AD --frames 20 --controls 30,66,0,0
+admhost32 dist/rewrites dist/rewrites/RAIN32.AD --frames 40 --controls 4,18,0,0
+admhost32 dist/rewrites dist/rewrites/SPOT32.AD --frames 30 --controls 0,10,2,0
+admhost32 dist/rewrites dist/rewrites/DRAINO32.AD --frames 60 --controls 67,0,1,1
 ```
 
 All rewrites receive the same 348-byte block and lifecycle as an original

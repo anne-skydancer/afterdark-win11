@@ -217,6 +217,20 @@ void adm_ellipse(ADM_CANVAS *canvas, int center_x, int center_y,
     }
 }
 
+void adm_filled_ellipse(ADM_CANVAS *canvas, int center_x, int center_y,
+                        int radius_x, int radius_y, uint32_t color)
+{
+    int y;
+    if (radius_x < 1 || radius_y < 1) return;
+    for (y = -radius_y; y <= radius_y; y++) {
+        double ratio = (double)y / (double)radius_y;
+        int half_width = (int)(sqrt(1.0 - ratio * ratio) * radius_x);
+        int x;
+        for (x = -half_width; x <= half_width; x++)
+            adm_put_pixel(canvas, center_x + x, center_y + y, color);
+    }
+}
+
 static int edge_intersection(int x0, int y0, int x1, int y1, int y, int *x)
 {
     int minimum = y0 < y1 ? y0 : y1;

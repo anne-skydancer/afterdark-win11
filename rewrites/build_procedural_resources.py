@@ -298,6 +298,49 @@ def main() -> None:
             none(),
         ],
     )
+    write_module(
+        args.output,
+        "rain32",
+        "Hard Rain",
+        [
+            number_slider("# of Drops:", 1, 9, 100, 22),
+            number_slider("Drop Size:", 5, 35, 100, 43),
+            none(),
+            checkbox("Clear Screen F", False),
+        ],
+    )
+    write_module(
+        args.output,
+        "spot32",
+        "Spotlight",
+        [
+            string_slider(
+                "Size:",
+                ["Random", "30", "40", "50", "60", "70", "80", "90",
+                 "100", "110", "120", "130", "140", "150", "160",
+                 "170", "180", "190", "200"],
+                [5, 10, 16, 22, 28, 34, 40, 46, 52, 58, 64, 70, 76, 82,
+                 87, 92, 97, 100, 101],
+                0,
+            ),
+            number_slider("Speed:", 1, 20, 1, 48),
+            number_slider("Spots:", 1, 4, 1, 44),
+            none(),
+        ],
+    )
+    write_module(
+        args.output,
+        "draino32",
+        "Down the Drain",
+        [
+            string_slider("Speed:", ["Slow", "Medium", "Fast"],
+                          [33, 67, 100], 100),
+            string_slider("Direction:", ["Clockwise", "Inward", "Counter"],
+                          [33, 67, 100], 100),
+            checkbox("Drops", True),
+            checkbox("Show Drain", True),
+        ],
+    )
 
 
 if __name__ == "__main__":
