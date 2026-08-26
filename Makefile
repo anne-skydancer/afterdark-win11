@@ -1,7 +1,7 @@
 # After Dark Studio -- full build.
 #
 #   make dist      build everything into dist/ (what the installer packages)
-#   make rewrite   build the independent Mandelbrot Classic rewrite
+#   make rewrite   build the independent Classic rewrites
 #   make test      run the ABI layout check and the catalogue tests
 #   make clean
 #
@@ -40,6 +40,12 @@ rewrite: prepare-dist
 	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
 		-o $(DIST)/rewrites/MANDEL32.AD rewrites/mandelbrot32.c \
 		$(DIST)/rewrite-build/mandelbrot32-res.o -lgdi32
+	$(PYTHON) rewrites/build_shapes_resources.py $(DIST)/rewrite-build
+	$(WINDRES) $(DIST)/rewrite-build/shapes32.rc \
+		-O coff -o $(DIST)/rewrite-build/shapes32-res.o
+	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
+		-o $(DIST)/rewrites/SHAPES32.AD rewrites/shapes32.c \
+		$(DIST)/rewrite-build/shapes32-res.o -lgdi32 -lm
 
 prepare-dist:
 	$(PYTHON) -c "from pathlib import Path; Path('$(DIST)').mkdir(parents=True, exist_ok=True)"

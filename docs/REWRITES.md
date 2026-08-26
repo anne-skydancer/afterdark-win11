@@ -210,12 +210,16 @@ first — that is cheap, and it will move some modules between tiers.*
   asset pipeline in the way. The independent `MANDEL32.AD` pilot now builds
   as PE32 i386, exports `Module`, embeds the original control schema, and
   renders through the recovered block without `ADXPL510.DLL`.
-2. **Build the asset pipeline against one Tier 2 module.** `BORIS` is a good
-   target: two controls, recovered above, and a recognisable result that makes
-   fidelity easy to judge.
-3. **Then breadth.** With runtime and pipeline done, Tier 1 becomes a
+2. **Add a second procedural module. Done.** `SHAPES.AD` is a 6,864-byte NE
+  module with no bitmap, palette, sound, or art resources. `SHAPES32.AD`
+  preserves its `Clear Screen Frequently` and `Color` toggles and renders
+  independent accumulating geometric outlines through the same ABI.
+3. **Build the asset pipeline against one Tier 2 module.** `BORIS` is a good
+  target: two controls, recovered above, and a recognisable result that makes
+  fidelity easy to judge.
+4. **Then breadth.** With runtime and pipeline done, Tier 1 becomes a
    production line and Tier 2 becomes routine.
-4. **Tier 3 only by demand.** Each is a bespoke project; pick the ones people
+5. **Tier 3 only by demand.** Each is a bespoke project; pick the ones people
    actually miss.
 
 A reasonable v1 target is Tier 1 plus a handful of beloved Tier 2 modules —
@@ -250,13 +254,14 @@ host path or proprietary runtime.
 ```
 make rewrite
 admhost32 dist/rewrites dist/rewrites/MANDEL32.AD --frames 3
+admhost32 dist/rewrites dist/rewrites/SHAPES32.AD --frames 80 --controls 0,1,0,0
 ```
 
-The pilot receives the same 348-byte block and lifecycle as an original module.
-It carries generated type-1000 Delay/Colors resources and an independent PAL
-resource; catalogue and settings code require no rewrite-specific branch.
-Measured host output is nonblank at both 32 bpp (183 byte values) and the
-production-default 8 bpp (37 indexed values with the themed palette).
+Both rewrites receive the same 348-byte block and lifecycle as an original
+module. They carry generated type-1000 resources; catalogue and settings code
+require no rewrite-specific branch. Each also carries an independent PAL
+resource. Measured host output is nonblank at both 32 bpp and the
+production-default 8 bpp.
 
 Future asset-backed rewrites should receive a read-only source path for the
 user's original resources. A shared open-source `admkit` should own ABI

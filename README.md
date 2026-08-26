@@ -90,7 +90,7 @@ owner of the idle timeout and sign-in-on-resume preferences.
 
 ```
 make dist        # build everything into dist/
-make rewrite     # build the independent MANDEL32.AD Classic rewrite pilot
+make rewrite     # build the independent MANDEL32.AD and SHAPES32.AD rewrites
 make test        # ABI layout check + catalogue tests
 make installer   # Inno Setup 7 (Windows)
 ```
