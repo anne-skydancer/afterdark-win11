@@ -42,13 +42,28 @@ The second `admkit` batch adds three more asset-free modules:
 - `STAINED32.AD` preserves Complexity, Duplication, and Color while drawing
 	animated, repeated stained-glass cells with black leading.
 
+The third batch covers line and particle effects:
+
+- `STRING32.AD` preserves String Groups, Strings, Color Speed, and Clear Screen
+	Frequently while accumulating circular string-art chords.
+- `PHOTON32.AD` preserves Length, Burst Delay, Always Centered, and Burst while
+	drawing persistent radial particle bursts.
+- `STRANGE32.AD` preserves Duration and Color Speed while tracing changing
+	nonlinear attractors.
+
+Photon delays and Strange durations use wall-clock time rather than assuming a
+fixed frame rate. Engine-free surfaces larger than 1920x1080 are rendered at a
+bounded aspect-preserving size and scaled by the host for smooth 4K output.
+Every generated module carries an `AD_REWRITE` marker resource, so the host can
+apply that policy even when `ADXPL510.DLL` is present in the same installation.
+
 Build it with:
 
 ```sh
 make rewrite
 ```
 
-The eight results are written below `dist/rewrites`. The build generates the
+The eleven results are written below `dist/rewrites`. The build generates the
 documented control-definition resources, compiles them with `windres`, and
 links self-contained x86 DLLs. They do not need `ADXPL510.DLL` or the original
 16-bit modules. `make dist` builds them, and future installer builds place them

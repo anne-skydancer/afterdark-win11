@@ -17,6 +17,8 @@ typedef struct ADM_CANVAS {
 
 void adm_canvas_release(ADM_CANVAS *canvas);
 int adm_canvas_resize(ADM_CANVAS *canvas, int width, int height);
+void adm_canvas_fit(const AD_MODULE32 *params, int maximum_width,
+                    int maximum_height, int *width, int *height);
 void adm_canvas_clear(ADM_CANVAS *canvas, uint32_t color);
 void adm_canvas_fade(ADM_CANVAS *canvas, unsigned numerator, unsigned denominator);
 void adm_canvas_present(const ADM_CANVAS *canvas, const AD_MODULE32 *params);

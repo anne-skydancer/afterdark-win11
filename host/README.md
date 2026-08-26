@@ -41,6 +41,13 @@ The engine load is optional for independent rewrites. Original AD4 modules
 still require `ADXPL510.DLL`; self-contained PE32 modules under
 `dist/rewrites` load and run without it.
 
+For engine-free modules, requested surfaces larger than 1920x1080 are bounded
+before DIB allocation and then scaled through the existing presentation path.
+This keeps frame pacing stable on 4K displays without changing original AD4
+modules, which continue to use their configured legacy surface. Clean-room
+modules identify themselves with an `AD_REWRITE` resource, so classification
+does not depend on whether an engine DLL happens to be present.
+
 ## Run
 
 ```

@@ -37,6 +37,23 @@ int adm_canvas_resize(ADM_CANVAS *canvas, int width, int height)
     return 1;
 }
 
+void adm_canvas_fit(const AD_MODULE32 *params, int maximum_width,
+                    int maximum_height, int *width, int *height)
+{
+    *width = params->rcClient.right - params->rcClient.left;
+    *height = params->rcClient.bottom - params->rcClient.top;
+    if (*width > maximum_width) {
+        *height = (int)((int64_t)*height * maximum_width / *width);
+        *width = maximum_width;
+    }
+    if (*height > maximum_height) {
+        *width = (int)((int64_t)*width * maximum_height / *height);
+        *height = maximum_height;
+    }
+    if (*width < 1) *width = 1;
+    if (*height < 1) *height = 1;
+}
+
 void adm_canvas_clear(ADM_CANVAS *canvas, uint32_t color)
 {
     size_t index;
@@ -62,6 +79,8 @@ void adm_canvas_fade(ADM_CANVAS *canvas, unsigned numerator, unsigned denominato
 void adm_canvas_present(const ADM_CANVAS *canvas, const AD_MODULE32 *params)
 {
     BITMAPINFO info;
+    int target_width;
+    int target_height;
     if (!canvas->pixels || !params->hDC) return;
 
     ZeroMemory(&info, sizeof(info));
@@ -71,7 +90,9 @@ void adm_canvas_present(const ADM_CANVAS *canvas, const AD_MODULE32 *params)
     info.bmiHeader.biPlanes = 1;
     info.bmiHeader.biBitCount = 32;
     info.bmiHeader.biCompression = BI_RGB;
-    StretchDIBits(params->hDC, 0, 0, canvas->width, canvas->height,
+    target_width = params->rcClient.right - params->rcClient.left;
+    target_height = params->rcClient.bottom - params->rcClient.top;
+    StretchDIBits(params->hDC, 0, 0, target_width, target_height,
                   0, 0, canvas->width, canvas->height, canvas->pixels, &info,
                   DIB_RGB_COLORS, SRCCOPY);
 }

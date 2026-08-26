@@ -103,6 +103,8 @@ def write_module(
         paths.append(path)
     palette_path = output / f"{stem}-palette.bin"
     palette_path.write_bytes(palette())
+    marker_path = output / "rewrite-marker.bin"
+    marker_path.write_bytes(b"After Dark Studio clean-room rewrite\0")
 
     resources = "\n".join(
         f'{index} 1000 "{quoted(path)}"'
@@ -114,6 +116,7 @@ def write_module(
 
 {resources}
 1 PAL "{quoted(palette_path)}"
+1 AD_REWRITE "{quoted(marker_path)}"
 
 1 VERSIONINFO
 FILEVERSION 0,1,0,0
@@ -222,6 +225,76 @@ def main() -> None:
             number_slider("Complexity:", 0, 100, 1, 10, "%", 2),
             number_slider("Duplication:", 0, 100, 1, 100, "%", 2),
             number_slider("Color:", 0, 100, 1, 100, "%", 2),
+            none(),
+        ],
+    )
+    write_module(
+        args.output,
+        "string32",
+        "String Theory",
+        [
+            combo_box("String Groups:", ["1", "2", "3", "4"], 2),
+            string_slider(
+                "Strings:",
+                ["10", "20", "30", "40", "50", "60", "70", "80",
+                 "90", "100", "110", "120", "130", "140", "150",
+                 "Infinite"],
+                [12, 18, 24, 30, 36, 42, 48, 54, 60, 66, 72, 78, 84,
+                 90, 95, 100],
+                87,
+            ),
+            number_slider("Color Speed:", 1, 100, 100, 96, "%", 2),
+            checkbox("Clear Screen F", False),
+        ],
+    )
+    write_module(
+        args.output,
+        "photon32",
+        "Photon",
+        [
+            string_slider(
+                "Length",
+                ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
+                 "12", "14", "16", "20", "24", "28", "32"],
+                [18, 26, 33, 39, 44, 49, 54, 59, 64, 69, 74, 79, 84, 89,
+                 94, 100, 101],
+                58,
+            ),
+            string_slider(
+                "Burst Delay",
+                ["None", "1/2 sec.", "1 sec.", "2 sec.", "5 sec.",
+                 "10 sec.", "30 sec."],
+                [10, 20, 40, 60, 80, 90, 100],
+                0,
+            ),
+            checkbox("Always Centere", True),
+            combo_box("Burst", ["Mixed", "Photon", "Electron", "Proton",
+                                "Neutrino"], 0),
+        ],
+    )
+    write_module(
+        args.output,
+        "strange32",
+        "Strange Attract",
+        [
+            string_slider(
+                "Duration:",
+                ["5 seconds", "10 seconds", "15 seconds", "20 seconds",
+                 "30 seconds", "45 seconds", "1 minute", "2 minutes",
+                 "5 minutes", "10 minutes", "15 minutes", "20 minutes",
+                 "30 minutes", "45 minutes", "1 hour"],
+                [15, 20, 27, 34, 40, 47, 54, 60, 67, 74, 80, 87, 94, 100,
+                 101],
+                30,
+            ),
+            string_slider(
+                "Color Speed:",
+                ["None", "Slowest", "Slower", "Slow", "Normal", "Fast",
+                 "Faster", "Fastest"],
+                [24, 36, 48, 60, 72, 84, 94, 100],
+                66,
+            ),
+            none(),
             none(),
         ],
     )

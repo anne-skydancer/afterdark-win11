@@ -77,6 +77,21 @@ rewrite: prepare-dist
 	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
 		-o $(DIST)/rewrites/STAINED32.AD rewrites/stained32.c rewrites/admkit.c \
 		$(DIST)/rewrite-build/stained32-res.o -lgdi32 -lm
+	$(WINDRES) $(DIST)/rewrite-build/string32.rc \
+		-O coff -o $(DIST)/rewrite-build/string32-res.o
+	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
+		-o $(DIST)/rewrites/STRING32.AD rewrites/string32.c rewrites/admkit.c \
+		$(DIST)/rewrite-build/string32-res.o -lgdi32 -lm
+	$(WINDRES) $(DIST)/rewrite-build/photon32.rc \
+		-O coff -o $(DIST)/rewrite-build/photon32-res.o
+	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
+		-o $(DIST)/rewrites/PHOTON32.AD rewrites/photon32.c rewrites/admkit.c \
+		$(DIST)/rewrite-build/photon32-res.o -lgdi32 -lm
+	$(WINDRES) $(DIST)/rewrite-build/strange32.rc \
+		-O coff -o $(DIST)/rewrite-build/strange32-res.o
+	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
+		-o $(DIST)/rewrites/STRANGE32.AD rewrites/strange32.c rewrites/admkit.c \
+		$(DIST)/rewrite-build/strange32-res.o -lgdi32 -lm
 
 prepare-dist:
 	$(PYTHON) -c "from pathlib import Path; Path('$(DIST)').mkdir(parents=True, exist_ok=True)"

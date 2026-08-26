@@ -2,6 +2,7 @@
 rewrites/*.c text eol=lf
 rewrites/*.h text eol=lf
 rewrites/*.py text eol=lf
+rewrites/build_shapes_resources.py -text whitespace=cr-at-eol
 tools/*.py text eol=lf
 src/AfterDark.Studio/*.cs whitespace=cr-at-eol
 src/AfterDark.Studio/*.xaml whitespace=cr-at-eol

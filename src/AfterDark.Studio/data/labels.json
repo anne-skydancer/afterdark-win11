@@ -7,5 +7,9 @@
   "SHAPES32.AD/0": "Clear Screen Frequently",
   "SPHERES.AD/3":  "Clear Screen Frequently",
   "SPHERES32.AD/3": "Clear Screen Frequently",
+  "STRING.AD/3":   "Clear Screen Frequently",
+  "STRING32.AD/3": "Clear Screen Frequently",
+  "PHOTON.AD/2":   "Always Centered",
+  "PHOTON32.AD/2": "Always Centered",
   "MESSAGES.AD/0": "Message Speed"
 }

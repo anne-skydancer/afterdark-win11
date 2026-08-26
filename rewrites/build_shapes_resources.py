@@ -55,11 +55,13 @@ def main() -> None:
     unused3 = args.output / "shapes-unused3.bin"
     unused4 = args.output / "shapes-unused4.bin"
     colors = args.output / "shapes-palette.bin"
+    marker = args.output / "rewrite-marker.bin"
     clear.write_bytes(checkbox("Clear Screen F", False))
     color.write_bytes(checkbox("Color", True))
     unused3.write_bytes(none())
     unused4.write_bytes(none())
     colors.write_bytes(palette())
+    marker.write_bytes(b"After Dark Studio clean-room rewrite\0")
 
     rc = args.output / "shapes32.rc"
     rc.write_text(
@@ -70,6 +72,7 @@ def main() -> None:
 3 1000 "{quoted(unused3)}"
 4 1000 "{quoted(unused4)}"
 1 PAL "{quoted(colors)}"
+1 AD_REWRITE "{quoted(marker)}"
 
 1 VERSIONINFO
 FILEVERSION 0,1,0,0

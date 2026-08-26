@@ -79,6 +79,7 @@ def main() -> None:
     delay = args.output / "mandelbrot-delay.bin"
     colors = args.output / "mandelbrot-colors.bin"
     palette = args.output / "mandelbrot-palette.bin"
+    marker = args.output / "rewrite-marker.bin"
     delay.write_bytes(
         string_slider(
             "Delay:",
@@ -91,6 +92,7 @@ def main() -> None:
         combo_box("Colors:", ["Earth", "Air", "Fire", "Water", "Random"], 3)
     )
     palette.write_bytes(themed_palette())
+    marker.write_bytes(b"After Dark Studio clean-room rewrite\0")
 
     rc = args.output / "mandelbrot32.rc"
     rc.write_text(
@@ -99,6 +101,7 @@ def main() -> None:
 1 1000 "{quoted(delay)}"
 2 1000 "{quoted(colors)}"
 1 PAL "{quoted(palette)}"
+1 AD_REWRITE "{quoted(marker)}"
 
 1 VERSIONINFO
 FILEVERSION 0,1,0,0

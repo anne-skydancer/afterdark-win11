@@ -393,6 +393,7 @@ int main(int argc, char **argv)
     const char *bmp = "admhost32.bmp";
     int  frames = 60, w = 640, h = 480, bpp = 8, fps = 30;
     int  present = 0, integer_scale = 1, stream = 0;
+    int  is_rewrite = 0;
     HWND parent = NULL;
     int  ctl[4] = {0,0,0,0};
     int  i, r, restarts = 0;
@@ -489,6 +490,7 @@ int main(int argc, char **argv)
         return 1;
     }
     ok("module at 0x%08lX", (unsigned long)(ULONG_PTR)hMod);
+    is_rewrite = FindResourceA(hMod, MAKEINTRESOURCEA(1), "AD_REWRITE") != NULL;
 
     /* -- 3. the entry point: decorated first, then undecorated -- */
     step("GetProcAddress " AD_ENTRY_DECORATED " / " AD_ENTRY_UNDECORATED);
@@ -499,6 +501,25 @@ int main(int argc, char **argv)
         if (g_proc) ok("resolved %s (undecorated)", AD_ENTRY_UNDECORATED);
     }
     if (!g_proc) { fail("no Module entry point -- is this an After Dark module?"); return 1; }
+
+    /* Independent rewrites do not need a monitor-sized module DIB. Keep their
+     * render surface bounded and let the existing presentation path scale it
+     * to a 4K parent window. This also keeps frame pacing and timed controls
+     * stable on very large displays. */
+    if ((is_rewrite || !hEngine) && (w > 1920 || h > 1080)) {
+        int requested_w = w, requested_h = h;
+        if ((LONGLONG)w * 1080 > (LONGLONG)h * 1920) {
+            h = (int)((LONGLONG)h * 1920 / w);
+            w = 1920;
+        } else {
+            w = (int)((LONGLONG)w * 1080 / h);
+            h = 1080;
+        }
+        if (w < 1) w = 1;
+        if (h < 1) h = 1;
+        fprintf(AD_OUT, "  [ .. ] bounded self-contained surface %dx%d -> %dx%d\n",
+                requested_w, requested_h, w, h);
+    }
 
     /* -- 4. an offscreen surface and its DC: this is the module's hDC -- */
     step("create DIB section + memory DC");
