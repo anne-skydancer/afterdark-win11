@@ -16,12 +16,7 @@ public partial class MainWindow : Window
 
     private void OnSetScreenSaver(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainViewModel vm) return;
-
-        // The .scr and Studio ship side by side; the installer keeps them there.
-        var dir = AppContext.BaseDirectory;
-        vm.SetAsScreenSaver(
-            Path.Combine(dir, "AfterDarkModern.scr"),
-            Path.Combine(dir, "AfterDark.Studio.exe"));
+        // Paths come from Setup's HKLM record, not from wherever a binary sits.
+        if (DataContext is MainViewModel vm) vm.SetAsScreenSaver();
     }
 }

@@ -206,31 +206,76 @@ public sealed class MainViewModel : Bindable
     /// The whole install flow: save settings, project them into saver.cfg, and
     /// point Windows at our .scr. No elevation, no System32, no .reg import.
     /// </summary>
-    public void SetAsScreenSaver(string scrPath, string? studioExe)
+    public void SetAsScreenSaver()
     {
         if (_selected is null) return;
         try
         {
             SaveSelection();
 
-            AfterDark.Studio.Services.SaverConfig.Write(
+            Services.SaverConfig.Write(
                 InstallPath,
                 _selected.Module.Path,
                 _selected.ToValues(),
                 _settings,
-                studioExe);
+                Services.AppPaths.Studio);
+
+            // Optionally publish the same choice as the machine-wide default, so
+            // every other account gets a working screensaver without setting one
+            // up. Silently a no-op without administrator rights.
+            if (ApplyToAllUsers) TryWriteMachineDefault();
 
             if (OperatingSystem.IsWindows())
             {
-                AfterDark.Studio.Services.ScreenSaverRegistration.Install(
-                    scrPath, TimeoutMinutes * 60, SecureResume);
-                Status = $"{_selected.Title} is now your screensaver.";
+                Services.ScreenSaverRegistration.Install(
+                    Services.AppPaths.ScreenSaver, TimeoutMinutes * 60, SecureResume);
+                Status = $"{_selected.Title} is now your screensaver."
+                       + (ApplyToAllUsers && _machineDefaultWritten
+                          ? " Set as the default for other users too." : "");
             }
             else Status = "Settings saved (registration is Windows-only).";
         }
         catch (Exception ex)
         {
             Status = $"Could not set the screensaver: {ex.Message}";
+        }
+    }
+
+    private bool _applyToAllUsers;
+    private bool _machineDefaultWritten;
+
+    /// <summary>
+    /// Publish this choice as the machine-wide default. Which screensaver is
+    /// *active* stays per-user -- Windows has no machine-wide equivalent -- but
+    /// this gives every account the same module and settings to start from.
+    /// </summary>
+    public bool ApplyToAllUsers
+    {
+        get => _applyToAllUsers;
+        set => Set(ref _applyToAllUsers, value);
+    }
+
+    public bool CanApplyToAllUsers => Services.AppPaths.CanWriteMachineDefaults();
+
+    private void TryWriteMachineDefault()
+    {
+        _machineDefaultWritten = false;
+        if (_selected is null) return;
+        try
+        {
+            Services.SaverConfig.Write(
+                InstallPath,
+                _selected.Module.Path,
+                _selected.ToValues(),
+                _settings,
+                Services.AppPaths.Studio,
+                path: Services.SaverConfig.MachinePath);
+            _machineDefaultWritten = true;
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+        {
+            Status = "Your screensaver is set. Setting the default for all users "
+                   + "needs administrator rights.";
         }
     }
 

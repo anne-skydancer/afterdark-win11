@@ -13,9 +13,10 @@ namespace AfterDark.Studio.Services;
 /// </summary>
 public static class SaverConfig
 {
-    public static string DefaultPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "AfterDarkStudio", "saver.cfg");
+    public static string DefaultPath => AppPaths.UserSaverConfig;
+
+    /// <summary>The machine-wide default every user falls back to (needs admin).</summary>
+    public static string MachinePath => AppPaths.MachineSaverConfig;
 
     public static void Write(
         string installPath,

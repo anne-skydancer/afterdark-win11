@@ -22,7 +22,7 @@ dist: native shell
 native: $(DIST)
 	$(CC32) $(CFLAGS) -o $(DIST)/admhost32.exe host/admhost32.c -lgdi32 -luser32
 	$(CC64) $(CFLAGS) -o $(DIST)/AfterDarkModern.scr scr/afterdark_modern.c \
-		-lgdi32 -luser32 -lshell32 -mwindows
+		-lgdi32 -luser32 -lshell32 -ladvapi32 -mwindows
 
 # Self-contained so the installer needs no .NET runtime prerequisite.
 shell: $(DIST)

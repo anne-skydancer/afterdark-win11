@@ -12,10 +12,20 @@
  *      /c[:<hwnd>]     show configuration (launches After Dark Studio)
  *
  * Configuration comes from a small key=value file written by Studio, so the
- * .scr needs no JSON parser and starts instantly.
+ * .scr needs no JSON parser and starts instantly. Two are consulted, in order:
+ *
+ *      %LOCALAPPDATA%\AfterDarkStudio\saver.cfg     this user's choice
+ *      %ProgramData%\AfterDarkStudio\saver.cfg      the machine-wide default
+ *
+ * so a system-wide install can give every user a working screensaver without
+ * each of them configuring one.
+ *
+ * The install directory comes from HKLM, NOT from wherever this .scr happens to
+ * sit: a system-wide install may copy it into System32 so it appears in every
+ * user's Screen Saver dropdown, and admhost32.exe is not in System32.
  *
  *   x86_64-w64-mingw32-gcc -O2 -o AfterDarkModern.scr afterdark_modern.c \
- *       -lgdi32 -luser32 -lshell32 -mwindows
+ *       -lgdi32 -luser32 -lshell32 -ladvapi32 -mwindows
  */
 
 #include <windows.h>
@@ -65,23 +75,21 @@ static void trim(char *s)
     while (*s == ' ' || *s == '\t') memmove(s, s + 1, strlen(s));
 }
 
-static void config_path(char *out, size_t n)
+/* CSIDL_LOCAL_APPDATA for this user, or CSIDL_COMMON_APPDATA for the machine. */
+static void config_path(char *out, size_t n, int common)
 {
     char base[MAX_PATH];
-    if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, base)))
+    int  folder = common ? CSIDL_COMMON_APPDATA : CSIDL_LOCAL_APPDATA;
+    if (SUCCEEDED(SHGetFolderPathA(NULL, folder, NULL, 0, base)))
         _snprintf(out, n, "%s\\AfterDarkStudio\\saver.cfg", base);
     else
         lstrcpynA(out, "saver.cfg", (int)n);
 }
 
-static int config_load(Config *c)
+static int config_read_file(Config *c, const char *path)
 {
-    char path[MAX_PATH], line[512];
-    FILE *fp;
-
-    config_defaults(c);
-    config_path(path, sizeof(path));
-    fp = fopen(path, "r");
+    char line[512];
+    FILE *fp = fopen(path, "r");
     if (!fp) return 0;
 
     while (fgets(line, sizeof(line), fp)) {
@@ -104,10 +112,25 @@ static int config_load(Config *c)
         else if (!_stricmp(line, "height"))   c->height = atoi(eq + 1);
     }
     fclose(fp);
+    return 1;
+}
+
+/* This user's settings win; the machine-wide default is the fallback. */
+static int config_load(Config *c)
+{
+    char path[MAX_PATH];
+
+    config_defaults(c);
+
+    config_path(path, sizeof(path), 0);
+    if (!config_read_file(c, path)) {
+        config_path(path, sizeof(path), 1);
+        config_read_file(c, path);
+    }
     return c->install[0] && c->module[0];
 }
 
-/* Sibling files live next to the .scr. */
+/* Sibling files, relative to this .scr. Only a fallback -- see install_file. */
 static void beside_me(const char *leaf, char *out, size_t n)
 {
     char self[MAX_PATH], *slash;
@@ -115,6 +138,47 @@ static void beside_me(const char *leaf, char *out, size_t n)
     slash = strrchr(self, '\\');
     if (slash) *slash = '\0';
     _snprintf(out, n, "%s\\%s", self, leaf);
+}
+
+/* Where Setup put the program. Recorded in HKLM by the installer, because a
+ * system-wide install may place this .scr in System32 while admhost32.exe and
+ * the shell stay in Program Files. */
+static int install_dir(char *out, size_t n)
+{
+    HKEY  k;
+    DWORD type = 0, cb = (DWORD)n;
+    LONG  rc;
+
+    rc = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\AfterDarkStudio", 0,
+                       KEY_READ, &k);
+    if (rc != ERROR_SUCCESS)
+        rc = RegOpenKeyExA(HKEY_CURRENT_USER, "SOFTWARE\\AfterDarkStudio", 0,
+                           KEY_READ, &k);
+    if (rc != ERROR_SUCCESS) return 0;
+
+    rc = RegQueryValueExA(k, "InstallDir", NULL, &type, (LPBYTE)out, &cb);
+    RegCloseKey(k);
+    if (rc != ERROR_SUCCESS || type != REG_SZ || out[0] == '\0') return 0;
+    out[n - 1] = '\0';
+    return 1;
+}
+
+/* A file that ships with the program: prefer the recorded install directory,
+ * fall back to sitting beside us (a portable, unpacked copy). */
+static void install_file(const char *leaf, char *out, size_t n)
+{
+    char dir[MAX_PATH], candidate[MAX_PATH];
+
+    if (install_dir(dir, sizeof(dir))) {
+        size_t len = strlen(dir);
+        while (len > 0 && dir[len - 1] == '\\') dir[--len] = '\0';
+        _snprintf(candidate, sizeof(candidate), "%s\\%s", dir, leaf);
+        if (GetFileAttributesA(candidate) != INVALID_FILE_ATTRIBUTES) {
+            lstrcpynA(out, candidate, (int)n);
+            return;
+        }
+    }
+    beside_me(leaf, out, n);
 }
 
 /* ------------------------------------------------------------------- child */
@@ -125,7 +189,7 @@ static HANDLE spawn_host(HWND parent)
     STARTUPINFOA si;
     PROCESS_INFORMATION pi;
 
-    beside_me("admhost32.exe", exe, sizeof(exe));
+    install_file("admhost32.exe", exe, sizeof(exe));
 
     _snprintf(cmd, sizeof(cmd),
               "\"%s\" \"%s\" \"%s\" --parent %llu --fps %d --scale %s "
@@ -292,7 +356,7 @@ static int run_configure(void)
     char studio[MAX_PATH];
     config_load(&g_cfg);
     if (g_cfg.studio[0]) lstrcpynA(studio, g_cfg.studio, MAX_PATH);
-    else beside_me("AfterDark.Studio.exe", studio, sizeof(studio));
+    else install_file("AfterDark.Studio.exe", studio, sizeof(studio));
 
     if ((INT_PTR)ShellExecuteA(NULL, "open", studio, "--configure", NULL, SW_SHOWNORMAL) <= 32) {
         MessageBoxA(NULL,

@@ -16,6 +16,14 @@ namespace AfterDark.Studio.Services;
 ///
 /// HKCU\Control Panel\Desktop is not subject to WOW64 registry redirection,
 /// so a 64-bit process writes exactly the same keys a 32-bit one would.
+///
+/// NOTE ON SYSTEM-WIDE INSTALLS. Which screensaver is active is a per-user
+/// setting by Windows design: the Group Policy that controls it lives under
+/// User Configuration and operates on HKEY_CURRENT_USER\Control Panel\Desktop.
+/// There is no HKLM equivalent the shell honours. A machine-wide install
+/// therefore puts the binaries where every user can run them and seeds a
+/// machine-wide default configuration, but each user still activates the
+/// screensaver for their own session -- here, or from the Windows dialog.
 /// </summary>
 [SupportedOSPlatform("windows")]
 public static class ScreenSaverRegistration

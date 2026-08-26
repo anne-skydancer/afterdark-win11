@@ -170,8 +170,13 @@
         <NumericUpDown Grid.Column="1" Margin="10,0" Width="110" Minimum="1" Maximum="180"
                        Value="{Binding TimeoutMinutes}" FormatString="0"
                        Background="{StaticResource PanelAlt}"/>
-        <CheckBox Grid.Column="3" Margin="0,0,14,0" IsChecked="{Binding SecureResume}"
-                  Foreground="{StaticResource Muted}" Content="Require sign-in on resume"/>
+        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="14" Margin="0,0,14,0">
+          <CheckBox IsChecked="{Binding ApplyToAllUsers}" IsEnabled="{Binding CanApplyToAllUsers}"
+                    Foreground="{StaticResource Muted}" Content="Default for all users"
+                    ToolTip.Tip="Publishes this module and its settings as the machine-wide default. Which screensaver is active stays per-user - Windows has no machine-wide setting for that. Needs administrator rights."/>
+          <CheckBox IsChecked="{Binding SecureResume}"
+                    Foreground="{StaticResource Muted}" Content="Require sign-in on resume"/>
+        </StackPanel>
         <Button Grid.Column="4" Name="SetSaver" Content="Set as screensaver" Padding="16,7"
                 Background="{StaticResource Accent}" Foreground="#12131A" FontWeight="SemiBold"
                 IsEnabled="{Binding HasSelection}"/>

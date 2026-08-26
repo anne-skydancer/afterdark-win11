@@ -51,8 +51,12 @@ make test        # ABI layout check + catalogue tests
 make installer   # Inno Setup 7 (Windows)
 ```
 
-Installation writes three values under `HKCU\Control Panel\Desktop` and calls
-`SystemParametersInfo`. No `System32` copy, no `.reg` import, no elevation.
+Installs **system-wide** into Program Files for every user (Inno Setup 7,
+`SetupArchitecture=x64`). Which screensaver is *active* stays per-user — the
+screensaver policy is User Configuration and operates on `HKCU\Control
+Panel\Desktop`, and no HKLM equivalent exists — so the installer seeds a
+machine-wide default under `%ProgramData%` and each user activates it for
+themselves. Still no `.reg` import and no hand-editing.
 
 ## Tools
 
