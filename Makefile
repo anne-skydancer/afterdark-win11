@@ -6,7 +6,7 @@
 #   make clean
 #
 # Cross-building from Linux needs mingw-w64 (both i686 and x86_64) plus the
-# .NET 8 SDK. On Windows use MSVC for the two native pieces and `dotnet
+# .NET 10 SDK. On Windows use MSVC for the two native pieces and `dotnet
 # publish` for the shell; the outputs are identical in layout.
 
 CC32    ?= i686-w64-mingw32-gcc

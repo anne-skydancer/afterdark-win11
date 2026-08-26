@@ -28,7 +28,7 @@ to load from the user's original module files.
 
 Feasibility is settled, the module ABI has been recovered by disassembly, a
 working host renders real After Dark 4 modules, and the app around it now
-exists: a 64-bit catalogue and settings UI, a 64-bit `.scr` that drives the
+exists: a native WPF/.NET 10 catalogue and settings UI, a 64-bit `.scr` that drives the
 whole screensaver path, registration without any registry hacks, and an Inno
 Setup 7 installer.
 
@@ -40,6 +40,7 @@ Setup 7 installer.
 | [host/README.md](host/README.md) | `admhost32` — a working 32-bit host that loads and renders real modules |
 | [docs/ABI.md](docs/ABI.md) | The AD4 module ABI, recovered by disassembly: entry point, 348-byte parameter block, message numbering, lifecycle |
 | [docs/REWRITES.md](docs/REWRITES.md) | The 61 16-bit Classic modules, and how to bring them forward as 32-bit rewrites |
+| [archive/AfterDark.Studio.Avalonia](archive/AfterDark.Studio.Avalonia) | Buildable archive of the former Avalonia Studio shell |
 
 **The short version.** After Dark 4's own (`AD40`) modules are 32-bit PE DLLs
 exporting a `Module` entry point against the `ADXPL510.DLL` engine — Windows 11

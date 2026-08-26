@@ -207,7 +207,7 @@ preferences out of their profile is not an uninstaller's decision.
 
 Studio publishes **self-contained win-x64**, so the installer needs no .NET
 runtime prerequisite. That costs roughly 90 MB in `dist/`. For a smaller
-download, drop `--self-contained` and add a .NET 8 Desktop Runtime check to
+download, drop `--self-contained` and add a .NET 10 Desktop Runtime check to
 `[Code]`; the trade is a prerequisite the user may have to install.
 
 ---
@@ -265,6 +265,6 @@ The `.iss` has been compiled with the real Inno Setup 7 compiler; it produces
 `AfterDarkStudio-0.1.5-setup.exe`, a genuine x86-64 binary (machine type
 `0x8664`), which is `SetupArchitecture=x64` doing its job.
 
-Cross-building from Linux needs `mingw-w64` (i686 **and** x86_64) and the .NET 8
+Cross-building from Linux needs `mingw-w64` (i686 **and** x86_64) and the .NET 10
 SDK. On Windows, use MSVC for the two native pieces and `dotnet publish` for the
 shell; the `dist/` layout is identical either way.

@@ -115,9 +115,9 @@ public sealed class ModuleViewModel : Bindable
     public string FileName => Module.FileName;
     public string Credits => Module.Credits;
     public bool CanRun => Module.CanRun;
-    public bool CannotRun => !Module.CanRun;
     public string Badge => Module.CanRun ? "AD4" : "16-bit";
-    public string BadgeColor => Module.CanRun ? "#5BC98B" : "#E4744F";
+    public Avalonia.Media.IBrush BadgeBrush => new Avalonia.Media.SolidColorBrush(
+        Avalonia.Media.Color.Parse(Module.CanRun ? "#5BC98B" : "#E4744F"));
     public string StatusLine => Module.CanRun
         ? $"{Module.FormatName} · {Controls.Count} setting{(Controls.Count == 1 ? "" : "s")}"
         : "Cannot run on 64-bit Windows";

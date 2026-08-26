@@ -41,14 +41,14 @@ contains crashes in 1996-vintage code.
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  AfterDarkStudio.exe            x64, WinUI 3 / Avalonia      │
+│  AfterDark.Studio.exe           x64, WPF / .NET 10           │
 │                                                              │
 │  Module gallery · per-module settings · live preview ·       │
-│  "Set as screensaver" · idle timeout · multi-monitor rules   │
+│  "Set as screensaver" · tray controls · Windows settings    │
 │                                                              │
 │  Owns: settings store (JSON), module catalogue, registry     │
 └───────────────┬──────────────────────────────────────────────┘
-                │  IPC: named pipe + shared-memory surface
+                │  IPC: command line + stdout BGRA frame stream
                 │  (control values down, frames/state up)
 ┌───────────────▼──────────────────────────────────────────────┐
 │  admhost32.exe                  x86 — REQUIRED               │
