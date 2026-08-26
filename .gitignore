@@ -8,6 +8,11 @@
 ADXPL*.DLL
 adxpl*.dll
 
+# editor and workspace files -- these are yours, not the project's
+.vscode/
+.vs/
+.idea/
+
 __pycache__/
 *.pyc
 ad4.json
