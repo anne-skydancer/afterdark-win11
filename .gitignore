@@ -12,7 +12,8 @@ __pycache__/
 *.pyc
 ad4.json
 
-# build output
+# build output — installers are Release assets, never repository content
+releases/*.exe
 dist/
 bin/
 obj/
