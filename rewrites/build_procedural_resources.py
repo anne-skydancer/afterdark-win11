@@ -13,8 +13,10 @@ def title_field(title: str) -> bytes:
     return encoded + bytes(14 - len(encoded))
 
 
-def none() -> bytes:
-    return bytes(32)
+def none(title: str = "") -> bytes:
+    blob = bytearray(32)
+    blob[2:16] = title_field(title)
+    return bytes(blob)
 
 
 def checkbox(title: str, checked: bool) -> bytes:
@@ -22,6 +24,13 @@ def checkbox(title: str, checked: bool) -> bytes:
     struct.pack_into("<H", blob, 0, 5)
     blob[2:16] = title_field(title)
     struct.pack_into("<h", blob, 24, int(checked))
+    return bytes(blob)
+
+
+def button(title: str) -> bytes:
+    blob = bytearray(32)
+    struct.pack_into("<H", blob, 0, 4)
+    blob[2:16] = title_field(title)
     return bytes(blob)
 
 
@@ -452,6 +461,26 @@ def main() -> None:
                        [25, 50, 75, 100], 69),
          number_slider("Segments:", 2, 20, 1, 70),
          number_slider("Worms:", 1, 20, 1, 70), none()],
+    )
+    write_module(
+        args.output, "dosshell32", "DOS Shell",
+        [none("User-Unfriendl"), combo_box("Color", ["Amber", "Green", "Mono", "Programmer",
+                                     "Random"], 1),
+         string_slider("Speed", ["Pokey", "Normal", "Fast", "Demon"],
+                   [30, 60, 90, 100], 75), none("Accuracy")],
+    )
+    write_module(
+        args.output, "puzzle32", "Puzzle",
+        [combo_box("Size:", ["Small", "Medium", "Large"], 0),
+         combo_box("Speed:", ["Slow", "Medium", "Fast"], 0),
+         none("Sound"), checkbox("Invert Screen", False)],
+    )
+    write_module(
+        args.output, "globe32", "Globe",
+        [number_slider("Rotation:", -45, 45, 1, 53, " deg", 2),
+         string_slider("Speed:", ["Slowest", "Slow", "Medium", "Fast", "Fastest"],
+                       [20, 40, 60, 80, 100], 53),
+         button("Map..."), none("Mirror:")],
     )
 
 

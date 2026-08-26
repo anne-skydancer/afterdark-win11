@@ -376,6 +376,7 @@ static void usage(void)
 "  --size WxH      surface size (default 640x480)\n"
 "  --bpp 8|32      surface depth (default 8, as modules expect)\n"
 "  --controls a,b,c,d   iControlValue[0..3] (default 0,0,0,0)\n"
+"  --button N      dispatch control button slot N after BLANK\n"
 "  --bmp FILE      write the final surface (default admhost32.bmp)\n"
 "  --fps N         frame pacing; 0 = unpaced like the original (default 30)\n"
 "  --present       show a window and run until input (screensaver mode)\n"
@@ -391,7 +392,7 @@ int main(int argc, char **argv)
 {
     char install[MAX_PATH], modpath[MAX_PATH], engine[MAX_PATH];
     const char *bmp = "admhost32.bmp";
-    int  frames = 60, w = 640, h = 480, bpp = 8, fps = 30;
+    int  frames = 60, w = 640, h = 480, bpp = 8, fps = 30, button = -1;
     int  present = 0, integer_scale = 1, stream = 0;
     int  is_rewrite = 0;
     HWND parent = NULL;
@@ -423,6 +424,8 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--size") && i+1 < argc) sscanf(argv[++i], "%dx%d", &w, &h);
         else if (!strcmp(argv[i], "--controls") && i+1 < argc)
             sscanf(argv[++i], "%d,%d,%d,%d", &ctl[0], &ctl[1], &ctl[2], &ctl[3]);
+        else if (!strcmp(argv[i], "--button") && i+1 < argc)
+            button = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--stream")) stream = 1;
         else if (!strcmp(argv[i], "--present")) present = 1;
         else if (!strcmp(argv[i], "--parent") && i+1 < argc)
@@ -637,6 +640,7 @@ restart:
     if (send_msg(AD_MSG_PREINITIALIZE, 0) != AD_OK)
         fprintf(AD_OUT, "  (PREINITIALIZE non-zero)\n");
     send_msg(AD_MSG_BLANK, 0);
+    if (button >= 0) send_msg(AD_MSG_BUTTON, (DWORD)(button & 0xFFFF));
 
     /* Modules repaint only damaged rectangles each DRAWFRAME. Without one full
      * repaint first, every pixel the module has not touched yet keeps whatever

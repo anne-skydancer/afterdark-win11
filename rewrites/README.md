@@ -94,13 +94,22 @@ The seventh batch adds clean-room physics modules:
 - `WORMS32.AD` preserves wiggle, segments, and worm count while moving coherent
 	segmented trails around the surface.
 
+The eighth batch adds period and utility scenes:
+
+- `DOSSHELL32.AD` preserves Color and Speed while recreating a scalable
+	DOS-era file manager scene.
+- `PUZZLE32.AD` preserves Size, Speed, and Invert Screen while moving legal
+	tiles through a shuffled sliding puzzle.
+- `GLOBE32.AD` preserves Rotation, Speed, and Map; it draws a tilted rotating
+	wireframe globe and toggles an independent map overlay from the button.
+
 Build it with:
 
 ```sh
 make rewrite
 ```
 
-The twenty-three results are written below `dist/rewrites`. The build generates the
+The twenty-six results are written below `dist/rewrites`. The build generates the
 documented control-definition resources, compiles them with `windres`, and
 links self-contained x86 DLLs. They do not need `ADXPL510.DLL` or the original
 16-bit modules. `make dist` builds them, and future installer builds place them

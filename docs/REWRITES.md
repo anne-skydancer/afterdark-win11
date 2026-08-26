@@ -241,12 +241,15 @@ first — that is cheap, and it will move some modules between tiers.*
   `WORMS32.AD` add bouncing gravity balls, expanding geometric outlines, and
   coherent segmented worms. Their original custom data is not copied; all
   visuals and simulation are independent.
-10. **Build the asset pipeline against one Tier 2 module.** `BORIS` is a good
+10. **Add period and utility scenes. Done.** `DOSSHELL32.AD`, `PUZZLE32.AD`, and
+  `GLOBE32.AD` add a scalable DOS file manager, legal sliding-puzzle movement,
+  and a rotating wireframe globe with a functional Map button.
+11. **Build the asset pipeline against one Tier 2 module.** `BORIS` is a good
   target: two controls, recovered above, and a recognisable result that makes
   fidelity easy to judge.
-11. **Then breadth.** With runtime and pipeline done, Tier 1 becomes a
+12. **Then breadth.** With runtime and pipeline done, Tier 1 becomes a
    production line and Tier 2 becomes routine.
-12. **Tier 3 only by demand.** Each is a bespoke project; pick the ones people
+13. **Tier 3 only by demand.** Each is a bespoke project; pick the ones people
    actually miss.
 
 A reasonable v1 target is Tier 1 plus a handful of beloved Tier 2 modules —
@@ -303,6 +306,9 @@ admhost32 dist/rewrites dist/rewrites/NIRVANA32.AD --frames 60 --controls 7,57,0
 admhost32 dist/rewrites dist/rewrites/GRAVITY32.AD --frames 40 --controls 4,24,1,0
 admhost32 dist/rewrites dist/rewrites/PUNCH32.AD --frames 40 --controls 0,65,9,0
 admhost32 dist/rewrites dist/rewrites/WORMS32.AD --frames 40 --controls 69,15,15,0
+admhost32 dist/rewrites dist/rewrites/DOSSHELL32.AD --frames 30 --controls 0,1,75,0
+admhost32 dist/rewrites dist/rewrites/PUZZLE32.AD --frames 30 --controls 0,0,0,0
+admhost32 dist/rewrites dist/rewrites/GLOBE32.AD --frames 30 --controls 8,53,0,0 --button 2
 ```
 
 All rewrites receive the same 348-byte block and lifecycle as an original

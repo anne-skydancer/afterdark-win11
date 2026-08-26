@@ -58,6 +58,7 @@ admhost32 <install-dir> <module.AD> [options]
   --size WxH           surface size (default 640x480)
   --bpp 8|32           surface depth (default 8)
   --controls a,b,c,d   iControlValue[0..3]
+  --button N           dispatch control button slot N after BLANK
   --bmp FILE           write the final surface
   --present            show a window and run until input (screensaver mode)
   --parent HWND        render inside an existing window; implies --present
