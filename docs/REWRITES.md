@@ -202,12 +202,14 @@ first — that is cheap, and it will move some modules between tiers.*
 
 ## 4. A practical order of work
 
-1. **Build the runtime against Mandelbrot.** `MANDELBR.AD` is 25,312 bytes,
+1. **Build the runtime against Mandelbrot. Done.** `MANDELBR.AD` is 25,312 bytes,
   imports only Win16 system APIs plus `WIN87EM`, and has no bitmap, palette,
   sound, or custom art resources. Its recovered controls are `Delay`
   (`0 sec.` through `1 min.`) and `Colors` (`Earth`, `Air`, `Fire`, `Water`,
   `Random`). It proves timing, canvas, scaling and the config path with no
-  asset pipeline in the way.
+  asset pipeline in the way. The independent `MANDEL32.AD` pilot now builds
+  as PE32 i386, exports `Module`, embeds the original control schema, and
+  renders through the recovered block without `ADXPL510.DLL`.
 2. **Build the asset pipeline against one Tier 2 module.** `BORIS` is a good
    target: two controls, recovered above, and a recognisable result that makes
    fidelity easy to judge.
@@ -240,20 +242,26 @@ have expressed, and the modern UI can.
 
 ## 6. Host work required for rewrites
 
-The current `admhost32` always loads `ADXPL510.DLL`, because every original AD4
-module except Starry Night expects that engine. A self-contained rewrite should
-not link proprietary engine code. Supporting one therefore requires a small,
-explicit host mode:
+`admhost32` now attempts to load `ADXPL510.DLL`, then continues when it is
+absent so a self-contained rewrite can bind. Original AD4 modules still fail
+clearly when their engine imports cannot resolve; rewrites need no special
+host path or proprietary runtime.
 
 ```
-admhost32 <rewrite-dir> MANDEL32.AD --source <owned-classic-dir>\MANDELBR.AD
+make rewrite
+admhost32 dist/rewrites dist/rewrites/MANDEL32.AD --frames 3
 ```
 
-In that mode the host skips `ADXPL510.DLL`, provides the same 348-byte
-`AD_MODULE32` block and lifecycle, and gives the rewrite a read-only source path
-for original resources. A shared open-source `admkit` should own ABI dispatch,
-palette/DIB decoding, timing, scaling, and sound so later modules contain only
-their behavior.
+The pilot receives the same 348-byte block and lifecycle as an original module.
+It carries generated type-1000 Delay/Colors resources and an independent PAL
+resource; catalogue and settings code require no rewrite-specific branch.
+Measured host output is nonblank at both 32 bpp (183 byte values) and the
+production-default 8 bpp (37 indexed values with the themed palette).
+
+Future asset-backed rewrites should receive a read-only source path for the
+user's original resources. A shared open-source `admkit` should own ABI
+dispatch, palette/DIB decoding, timing, scaling, and sound so later modules
+contain only their behavior.
 
 The first acceptance test should compare deterministic Mandelbrot frames and
 control values against a Win16 reference run. Only after that should work begin

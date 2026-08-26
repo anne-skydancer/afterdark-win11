@@ -27,7 +27,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from adlib import (SYSTEM_DLLS, Unsupported, credits,  # noqa: E402
+from adlib import (Unsupported, credits, is_system_dll,  # noqa: E402
                    display_name, is_module_entry, open_image)
 
 SCAN_EXTS = {".ad", ".adm"}
@@ -47,7 +47,7 @@ def extract(path: str) -> dict:
     exports = img.exports()
     is_module = any(is_module_entry(e) for e in exports)
     engine = {k: v for k, v in img.imports().items()
-              if k.lower() not in SYSTEM_DLLS}
+              if not is_system_dll(k)}
     resources = img.resources()
 
     # The engine addresses controls by slot (iControlValue[0..3]), so the

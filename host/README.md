@@ -37,6 +37,10 @@ cl /O2 admhost32.c user32.lib gdi32.lib     # MSVC, 32-bit toolchain
 The program refuses to run if built 64-bit or if `AD_MODULE32` is the wrong
 size, rather than failing mysteriously later.
 
+The engine load is optional for independent rewrites. Original AD4 modules
+still require `ADXPL510.DLL`; a self-contained PE32 rewrite such as
+`dist/rewrites/MANDEL32.AD` loads and runs without it.
+
 ## Run
 
 ```

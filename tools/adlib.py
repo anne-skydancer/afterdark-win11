@@ -21,7 +21,7 @@ import struct
 
 __all__ = [
     "Unsupported", "PEImage", "NEImage", "open_image", "is_module_entry",
-    "decode_control", "display_name", "credits",
+    "decode_control", "display_name", "credits", "is_system_dll",
     "CONTROL_TYPES", "SYSTEM_DLLS", "STD_RES_TYPES",
 ]
 
@@ -32,6 +32,12 @@ SYSTEM_DLLS = {
     "rpcrt4.dll", "shlwapi.dll", "mpr.dll", "wsock32.dll",
     "kernel", "user", "gdi", "keyboard", "shell", "mmsystem", "sound",
 }
+
+
+def is_system_dll(name: str) -> bool:
+    lower = name.lower()
+    return (lower in SYSTEM_DLLS or lower.startswith("api-ms-win-") or
+            lower.startswith("ext-ms-"))
 
 STD_RES_TYPES = {
     1: "CURSOR", 2: "BITMAP", 3: "ICON", 4: "MENU", 5: "DIALOG", 6: "STRING",

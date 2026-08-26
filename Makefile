@@ -1,6 +1,7 @@
 # After Dark Studio -- full build.
 #
 #   make dist      build everything into dist/ (what the installer packages)
+#   make rewrite   build the independent Mandelbrot Classic rewrite
 #   make test      run the ABI layout check and the catalogue tests
 #   make clean
 #
@@ -10,27 +11,38 @@
 
 CC32    ?= i686-w64-mingw32-gcc
 CC64    ?= x86_64-w64-mingw32-gcc
+WINDRES ?= i686-w64-mingw32-windres
+PYTHON  ?= python3
 CFLAGS  ?= -O2 -Wall -Wextra
 DIST    ?= dist
 
-.PHONY: dist native shell test clean installer
+.PHONY: dist prepare-dist native shell rewrite test clean installer
 
-dist: native shell
+dist: prepare-dist native shell
 	@echo "dist/ ready:"
 	@ls -1 $(DIST) | sed 's/^/  /'
 
-native: $(DIST)
+native: prepare-dist
 	$(CC32) $(CFLAGS) -o $(DIST)/admhost32.exe host/admhost32.c -lgdi32 -luser32
 	$(CC64) $(CFLAGS) -o $(DIST)/AfterDarkModern.scr scr/afterdark_modern.c \
 		-lgdi32 -luser32 -lshell32 -ladvapi32 -mwindows
 
 # Self-contained so the installer needs no .NET runtime prerequisite.
-shell: $(DIST)
+shell: prepare-dist
 	dotnet publish src/AfterDark.Studio -c Release -r win-x64 \
 		--self-contained true -p:PublishSingleFile=false -o $(DIST)
 
-$(DIST):
-	mkdir -p $(DIST)
+rewrite: prepare-dist
+	$(PYTHON) -c "from pathlib import Path; [Path(p).mkdir(parents=True, exist_ok=True) for p in ('$(DIST)/rewrite-build', '$(DIST)/rewrites')]"
+	$(PYTHON) rewrites/build_mandelbrot_resources.py $(DIST)/rewrite-build
+	$(WINDRES) $(DIST)/rewrite-build/mandelbrot32.rc \
+		-O coff -o $(DIST)/rewrite-build/mandelbrot32-res.o
+	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
+		-o $(DIST)/rewrites/MANDEL32.AD rewrites/mandelbrot32.c \
+		$(DIST)/rewrite-build/mandelbrot32-res.o -lgdi32
+
+prepare-dist:
+	$(PYTHON) -c "from pathlib import Path; Path('$(DIST)').mkdir(parents=True, exist_ok=True)"
 
 test:
 	cc -Wall -Wextra -o /tmp/ad_abitest tests/test_ad_module32_layout.c && /tmp/ad_abitest

@@ -396,7 +396,7 @@ int main(int argc, char **argv)
     HWND parent = NULL;
     int  ctl[4] = {0,0,0,0};
     int  i, r, restarts = 0;
-    HMODULE hEngine, hMod;
+    HMODULE hEngine = NULL, hMod;
     HWND    wnd, module_wnd;
     HDC     screen, mem;
     HBITMAP dib, old;
@@ -462,17 +462,16 @@ int main(int argc, char **argv)
     step("SetCurrentDirectory + SetDllDirectory to the install");
     SetCurrentDirectoryA(install);
     SetDllDirectoryA(install);
-    configure_engine_folders(install);
 
     step("LoadLibrary ADXPL510.DLL");
     hEngine = LoadLibraryA(engine);
     if (!hEngine) {
-        fail("could not load %s", engine);
-        fprintf(AD_OUT, "\n  The engine must load before any module: modules import\n"
-               "  150-300 functions from it and will not bind without it.\n");
-        return 1;
+        fprintf(AD_OUT, "  [ ?? ] engine not found; trying a self-contained module\n");
     }
-    ok("engine at 0x%08lX", (unsigned long)(ULONG_PTR)hEngine);
+    else {
+        configure_engine_folders(install);
+        ok("engine at 0x%08lX", (unsigned long)(ULONG_PTR)hEngine);
+    }
 
     /* -- 2. the module -- */
     if (!strchr(modpath, '\\') && !strchr(modpath, '/')) {
@@ -482,7 +481,13 @@ int main(int argc, char **argv)
     }
     step("LoadLibrary the module");
     hMod = LoadLibraryA(modpath);
-    if (!hMod) { fail("could not load %s", modpath); return 1; }
+    if (!hMod) {
+        fail("could not load %s", modpath);
+        if (!hEngine)
+            fprintf(AD_OUT, "\n  Original AD4 modules require ADXPL510.DLL; "
+                   "self-contained rewrites do not.\n");
+        return 1;
+    }
     ok("module at 0x%08lX", (unsigned long)(ULONG_PTR)hMod);
 
     /* -- 3. the entry point: decorated first, then undecorated -- */
@@ -772,7 +777,7 @@ teardown:
     if (wnd) DestroyWindow(wnd);
     free(bi);
     FreeLibrary(hMod);
-    FreeLibrary(hEngine);
+    if (hEngine) FreeLibrary(hEngine);
 
     fprintf(AD_OUT, "\ndone.\n");
     return 0;
