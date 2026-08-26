@@ -230,12 +230,16 @@ first — that is cheap, and it will move some modules between tiers.*
   `DRAINO32.AD` add slanted rain, independently moving spotlights, and a
   configurable drain spiral. Their original modules contain no artwork or
   sound resources, and all controls match field-for-field.
-7. **Build the asset pipeline against one Tier 2 module.** `BORIS` is a good
+7. **Add procedural geometry modules. Done.** `MOUNTAIN32.AD`, `VERTIGO32.AD`,
+  and `SUNBURST32.AD` add projected terrain meshes, rotating spirals, and
+  wall-clock-paced radial rays. Mountain modes and complexity levels produce
+  distinct geometry, and all controls match field-for-field.
+8. **Build the asset pipeline against one Tier 2 module.** `BORIS` is a good
   target: two controls, recovered above, and a recognisable result that makes
   fidelity easy to judge.
-8. **Then breadth.** With runtime and pipeline done, Tier 1 becomes a
+9. **Then breadth.** With runtime and pipeline done, Tier 1 becomes a
    production line and Tier 2 becomes routine.
-9. **Tier 3 only by demand.** Each is a bespoke project; pick the ones people
+10. **Tier 3 only by demand.** Each is a bespoke project; pick the ones people
    actually miss.
 
 A reasonable v1 target is Tier 1 plus a handful of beloved Tier 2 modules —
@@ -283,6 +287,9 @@ admhost32 dist/rewrites dist/rewrites/STRANGE32.AD --frames 20 --controls 30,66,
 admhost32 dist/rewrites dist/rewrites/RAIN32.AD --frames 40 --controls 4,18,0,0
 admhost32 dist/rewrites dist/rewrites/SPOT32.AD --frames 30 --controls 0,10,2,0
 admhost32 dist/rewrites dist/rewrites/DRAINO32.AD --frames 60 --controls 67,0,1,1
+admhost32 dist/rewrites dist/rewrites/MOUNTAIN32.AD --frames 4 --controls 5,9,5,70
+admhost32 dist/rewrites dist/rewrites/VERTIGO32.AD --frames 20 --controls 2,100,100,35
+admhost32 dist/rewrites dist/rewrites/SUNBURST32.AD --frames 30 --controls 60,0,0,0
 ```
 
 All rewrites receive the same 348-byte block and lifecycle as an original

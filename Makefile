@@ -107,6 +107,21 @@ rewrite: prepare-dist
 	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
 		-o $(DIST)/rewrites/DRAINO32.AD rewrites/draino32.c rewrites/admkit.c \
 		$(DIST)/rewrite-build/draino32-res.o -lgdi32 -lm
+	$(WINDRES) $(DIST)/rewrite-build/mountain32.rc \
+		-O coff -o $(DIST)/rewrite-build/mountain32-res.o
+	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
+		-o $(DIST)/rewrites/MOUNTAIN32.AD rewrites/mountain32.c rewrites/admkit.c \
+		$(DIST)/rewrite-build/mountain32-res.o -lgdi32 -lm
+	$(WINDRES) $(DIST)/rewrite-build/vertigo32.rc \
+		-O coff -o $(DIST)/rewrite-build/vertigo32-res.o
+	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
+		-o $(DIST)/rewrites/VERTIGO32.AD rewrites/vertigo32.c rewrites/admkit.c \
+		$(DIST)/rewrite-build/vertigo32-res.o -lgdi32 -lm
+	$(WINDRES) $(DIST)/rewrite-build/sunburst32.rc \
+		-O coff -o $(DIST)/rewrite-build/sunburst32-res.o
+	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
+		-o $(DIST)/rewrites/SUNBURST32.AD rewrites/sunburst32.c rewrites/admkit.c \
+		$(DIST)/rewrite-build/sunburst32-res.o -lgdi32 -lm
 
 prepare-dist:
 	$(PYTHON) -c "from pathlib import Path; Path('$(DIST)').mkdir(parents=True, exist_ok=True)"

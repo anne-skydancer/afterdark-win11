@@ -341,6 +341,50 @@ def main() -> None:
             checkbox("Show Drain", True),
         ],
     )
+    write_module(
+        args.output,
+        "mountain32",
+        "Mountains",
+        [
+            combo_box("View:", ["Boundaries", "Webs", "Mountains",
+                                "Constructions", "Highlands", "Random"], 5),
+            combo_box("Planet:", ["Mercury", "Venus", "Earth", "Mars",
+                                  "Jupiter", "Saturn", "Uranus", "Neptune",
+                                  "Pluto", "Random"], 9),
+            number_slider("Complexity:", 3, 6, 1, 69),
+            number_slider("Zoom:", 0, 100, 100, 70),
+        ],
+    )
+    write_module(
+        args.output,
+        "vertigo32",
+        "Vertigo",
+        [
+            combo_box("Palette:", ["Smooth", "Random", "Stingray"], 2),
+            number_slider("Spiral Pitch:", 1, 100, 100, 100, "%", 2),
+            number_slider("Color Speed:", 0, 100, 100, 100, "%", 2),
+            string_slider(
+                "Delay:",
+                ["0 secs", "1 second", "2 secs", "5 secs", "10 secs",
+                 "20 secs", "30 secs", "40 secs", "50 secs", "1 minute"],
+                [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+                35,
+            ),
+        ],
+    )
+    write_module(
+        args.output,
+        "sunburst32",
+        "Sunburst",
+        [
+            string_slider("Delay:", ["Slowest", "Slow", "Medium", "Fast",
+                                      "Fastest"],
+                          [30, 50, 70, 90, 100], 60),
+            none(),
+            none(),
+            none(),
+        ],
+    )
 
 
 if __name__ == "__main__":

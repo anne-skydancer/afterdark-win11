@@ -66,13 +66,23 @@ The fourth batch adds three more asset-free particle modules:
 - `DRAINO32.AD` preserves Speed, Direction, Drops, and Show Drain while drawing
 	particles spiraling into a visible drain.
 
+The fifth batch adds three asset-free geometry modules:
+
+- `MOUNTAIN32.AD` preserves View, Planet, Complexity, and Zoom while drawing
+	complete projected height-field meshes with distinct boundary, web,
+	mountain, construction, and highland modes.
+- `VERTIGO32.AD` preserves Palette, Spiral Pitch, Color Speed, and Delay while
+	drawing rotating multicolor spirals with randomized palette scenes.
+- `SUNBURST32.AD` preserves Delay while drawing a wall-clock-paced expanding
+	radial field.
+
 Build it with:
 
 ```sh
 make rewrite
 ```
 
-The fourteen results are written below `dist/rewrites`. The build generates the
+The seventeen results are written below `dist/rewrites`. The build generates the
 documented control-definition resources, compiles them with `windres`, and
 links self-contained x86 DLLs. They do not need `ADXPL510.DLL` or the original
 16-bit modules. `make dist` builds them, and future installer builds place them
