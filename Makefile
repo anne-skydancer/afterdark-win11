@@ -149,6 +149,12 @@ rewrite: prepare-dist
 	$(CC32) $(CFLAGS) -DADM_PUZZLE -shared -Wl,--kill-at -o $(DIST)/rewrites/PUZZLE32.AD rewrites/utility32.c rewrites/admkit.c $(DIST)/rewrite-build/puzzle32-res.o -lgdi32 -luser32 -lm
 	$(WINDRES) $(DIST)/rewrite-build/globe32.rc -O coff -o $(DIST)/rewrite-build/globe32-res.o
 	$(CC32) $(CFLAGS) -DADM_GLOBE -shared -Wl,--kill-at -o $(DIST)/rewrites/GLOBE32.AD rewrites/utility32.c rewrites/admkit.c $(DIST)/rewrite-build/globe32-res.o -lgdi32 -luser32 -lm
+	$(WINDRES) $(DIST)/rewrite-build/frost32.rc -O coff -o $(DIST)/rewrite-build/frost32-res.o
+	$(CC32) $(CFLAGS) -DADM_FROST -shared -Wl,--kill-at -o $(DIST)/rewrites/FROST32.AD rewrites/advanced32.c rewrites/admkit.c $(DIST)/rewrite-build/frost32-res.o -lgdi32 -lm
+	$(WINDRES) $(DIST)/rewrite-build/zoom32.rc -O coff -o $(DIST)/rewrite-build/zoom32-res.o
+	$(CC32) $(CFLAGS) -DADM_ZOOM -shared -Wl,--kill-at -o $(DIST)/rewrites/ZOOM32.AD rewrites/advanced32.c rewrites/admkit.c $(DIST)/rewrite-build/zoom32-res.o -lgdi32 -lm
+	$(WINDRES) $(DIST)/rewrite-build/geobounc32.rc -O coff -o $(DIST)/rewrite-build/geobounc32-res.o
+	$(CC32) $(CFLAGS) -DADM_GEOBOUNCE -shared -Wl,--kill-at -o $(DIST)/rewrites/GEOBOUNC32.AD rewrites/advanced32.c rewrites/admkit.c $(DIST)/rewrite-build/geobounc32-res.o -lgdi32 -lm
 
 prepare-dist:
 	$(PYTHON) -c "from pathlib import Path; Path('$(DIST)').mkdir(parents=True, exist_ok=True)"

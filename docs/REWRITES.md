@@ -244,12 +244,15 @@ first — that is cheap, and it will move some modules between tiers.*
 10. **Add period and utility scenes. Done.** `DOSSHELL32.AD`, `PUZZLE32.AD`, and
   `GLOBE32.AD` add a scalable DOS file manager, legal sliding-puzzle movement,
   and a rotating wireframe globe with a functional Map button.
-11. **Build the asset pipeline against one Tier 2 module.** `BORIS` is a good
+11. **Add advanced procedural graphics. Done.** `FROST32.AD`, `ZOOM32.AD`, and
+  `GEOBOUNC32.AD` add independent plasma fields, bounded fractal zooms, and
+  regular rotating polyhedra with functional face modes.
+12. **Build the asset pipeline against one Tier 2 module.** `BORIS` is a good
   target: two controls, recovered above, and a recognisable result that makes
   fidelity easy to judge.
-12. **Then breadth.** With runtime and pipeline done, Tier 1 becomes a
+13. **Then breadth.** With runtime and pipeline done, Tier 1 becomes a
    production line and Tier 2 becomes routine.
-13. **Tier 3 only by demand.** Each is a bespoke project; pick the ones people
+14. **Tier 3 only by demand.** Each is a bespoke project; pick the ones people
    actually miss.
 
 A reasonable v1 target is Tier 1 plus a handful of beloved Tier 2 modules —
@@ -309,6 +312,9 @@ admhost32 dist/rewrites dist/rewrites/WORMS32.AD --frames 40 --controls 69,15,15
 admhost32 dist/rewrites dist/rewrites/DOSSHELL32.AD --frames 30 --controls 0,1,75,0
 admhost32 dist/rewrites dist/rewrites/PUZZLE32.AD --frames 30 --controls 0,0,0,0
 admhost32 dist/rewrites dist/rewrites/GLOBE32.AD --frames 30 --controls 8,53,0,0 --button 2
+admhost32 dist/rewrites dist/rewrites/FROST32.AD --frames 10 --controls 55,0,0,0
+admhost32 dist/rewrites dist/rewrites/ZOOM32.AD --frames 10 --controls 0,63,0,0
+admhost32 dist/rewrites dist/rewrites/GEOBOUNC32.AD --frames 10 --controls 0,55,28,2
 ```
 
 All rewrites receive the same 348-byte block and lifecycle as an original

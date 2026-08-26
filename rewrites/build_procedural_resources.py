@@ -482,6 +482,42 @@ def main() -> None:
                        [20, 40, 60, 80, 100], 53),
          button("Map..."), none("Mirror:")],
     )
+    write_module(
+        args.output, "frost32", "Frost and Fire",
+        [number_slider("Size:", 10, 100, 90, 45, "%", 2),
+         combo_box("Palette:", ["Bright", "Stormy", "Gray Scale", "Ramped",
+                              "Electric", "Rainbows", "Sine", "Plasma",
+                              "Cycloid"], 0),
+         checkbox("Maximize Speed", False), none()],
+    )
+    write_module(
+        args.output, "zoom32", "Zooommm!",
+        [combo_box("Colors", ["Smooth", "Saw", "Saw2", "Saw3", "Saw4",
+                            "Ramped", "Ramped2", "Ramped3", "Electric",
+                            "Crest", "Rainbows", "Sine", "Sine2", "Sine3",
+                            "Cycloid", "iCycloid", "iCycloid2", "Oscillate",
+                            "Oscillate2", "Random", "Banded"], 0),
+         string_slider("Speed", ["Slowest", "Slowest", "Slow", "Slow",
+                                "Medium", "Medium", "Fast", "Fast", "Faster",
+                                "Faster", "Zooommin"],
+                       [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 101], 63),
+         string_slider("Delay", ["Shortest", "Shortest", "Shortest", "Shortest",
+                                "Short", "Short", "Short", "Short", "Medium",
+                                "Medium", "Medium", "Medium", "Long", "Long",
+                                "Long", "Long", "Longer", "Longer", "Longer",
+                                "Longer", "Longest"],
+                       [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65,
+                        70, 75, 80, 85, 90, 95, 100, 101], 0),
+         none()],
+    )
+    write_module(
+        args.output, "geobounc32", "GeoBounce",
+        [combo_box("Shape", ["Tetrahedron", "Cube", "Octahedron", "Dodecahedron",
+                            "Icosahedron"], 0),
+         number_slider("Size:", 10, 100, 1, 54, "%", 2),
+         number_slider("Speed:", 0, 100, 1, 28, "%", 2),
+         combo_box("Faces", ["Shading", "Colors", "Both"], 2)],
+    )
 
 
 if __name__ == "__main__":

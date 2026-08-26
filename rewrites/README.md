@@ -103,13 +103,22 @@ The eighth batch adds period and utility scenes:
 - `GLOBE32.AD` preserves Rotation, Speed, and Map; it draws a tilted rotating
 	wireframe globe and toggles an independent map overlay from the button.
 
+The ninth batch adds advanced procedural graphics:
+
+- `FROST32.AD` preserves Size, Palette, and Maximize Speed while rendering an
+	animated plasma/frost field with independent color functions.
+- `ZOOM32.AD` preserves Colors, Speed, and Delay while repeatedly zooming a
+	bounded Mandelbrot scene without depth overflow.
+- `GEOBOUNC32.AD` preserves Shape, Size, Speed, and Faces while rotating and
+	bouncing regular polyhedra with filled and colored face modes.
+
 Build it with:
 
 ```sh
 make rewrite
 ```
 
-The twenty-six results are written below `dist/rewrites`. The build generates the
+The twenty-nine results are written below `dist/rewrites`. The build generates the
 documented control-definition resources, compiles them with `windres`, and
 links self-contained x86 DLLs. They do not need `ADXPL510.DLL` or the original
 16-bit modules. `make dist` builds them, and future installer builds place them
