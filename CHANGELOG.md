@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.1.6 — native Windows Studio
+
+### Changed
+
+- Studio now uses WPF on .NET 10 with the built-in system theme and Windows
+  accent resources, replacing the cross-platform Avalonia presentation layer.
+- Tray controls use the native Windows notification-area implementation, while
+  folder import, streamed module preview, settings, and screenshot workflows
+  retain their existing behavior.
+- The former Avalonia 11.3.20 Studio remains independently buildable under
+  `archive/AfterDark.Studio.Avalonia` for historical comparison.
+
+### Verified
+
+- The WPF shell enumerates all 84 modules from owned media and captures live
+  Flying Toasters pixels through the x86 host frame stream.
+- All 12 managed tests pass on .NET 10, self-contained `win-x64` publishing
+  succeeds, and the active dependency graph has no known vulnerabilities.
+
 ## 0.1.5 — original module sound
 
 ### Fixed

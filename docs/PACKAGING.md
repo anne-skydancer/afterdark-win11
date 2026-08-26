@@ -262,7 +262,7 @@ make installer   # Inno Setup 7
 ```
 
 The `.iss` has been compiled with the real Inno Setup 7 compiler; it produces
-`AfterDarkStudio-0.1.5-setup.exe`, a genuine x86-64 binary (machine type
+`AfterDarkStudio-0.1.6-setup.exe`, a genuine x86-64 binary (machine type
 `0x8664`), which is `SetupArchitecture=x64` doing its job.
 
 Cross-building from Linux needs `mingw-w64` (i686 **and** x86_64) and the .NET 10

@@ -6,8 +6,8 @@ application, in which every module is properly configurable.
 
 ## Download
 
-**[AfterDarkStudio-0.1.5-setup.exe](releases/AfterDarkStudio-0.1.5-setup.exe)** —
-64-bit, system-wide, self-contained (32.2 MB). Checksum and full notes in
+**[AfterDarkStudio-0.1.6-setup.exe](releases/AfterDarkStudio-0.1.6-setup.exe)** —
+64-bit, system-wide, self-contained (49.9 MiB). Checksum and full notes in
 [releases/](releases/README.md).
 
 The Studio UI and real disc catalogue have now been exercised on Windows 11.

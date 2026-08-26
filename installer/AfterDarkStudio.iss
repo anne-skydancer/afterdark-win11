@@ -46,7 +46,7 @@
 ; #define BundleModulesFrom "C:\Program Files (x86)\After Dark"
 
 #define AppName        "After Dark Studio"
-#define AppVersion     "0.1.5"
+#define AppVersion     "0.1.6"
 #define AppPublisher   "After Dark Studio contributors"
 #define AppExe         "AfterDark.Studio.exe"
 #define ScrName        "AfterDarkModern.scr"

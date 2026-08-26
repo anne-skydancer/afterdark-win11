@@ -1,5 +1,37 @@
 # Downloads
 
+## AfterDarkStudio-0.1.6-setup.exe
+
+64-bit installer for Windows 10 1809 and later. 49.9 MiB, self-contained — no
+.NET runtime prerequisite.
+
+```
+SHA-256  cedff76670e44e7b77a64d7c5cb45e3ee1baf7688afdc7b2f02da0cf7ac80b43
+```
+
+Verify before running:
+
+```powershell
+Get-FileHash .\AfterDarkStudio-0.1.6-setup.exe -Algorithm SHA256
+```
+
+### What changed
+
+- Studio now uses native WPF presentation on .NET 10, following the Windows
+  system theme and accent without shipping the cross-platform Avalonia stack.
+- Tray switching, folder import, streamed native preview, module controls, and
+  the Windows-owned screensaver settings workflow retain their prior behavior.
+- The former Avalonia 11.3.20 shell is preserved as a buildable source archive.
+
+The exact staged release enumerated all 84 modules from owned media, exposed 23
+runnable and 61 legacy modules, and captured nonblank Flying Toasters preview
+pixels. All 12 managed tests and the native ABI layout test pass. The payload
+contains no Berkeley Systems modules or media and no Avalonia assemblies.
+
+The installer is a native x64 Inno Setup 7.1.0 executable. It contains an x64
+Studio and screensaver plus the required x86 module host. It is not code-signed,
+so SmartScreen will warn.
+
 ## AfterDarkStudio-0.1.5-setup.exe
 
 64-bit installer for Windows 10 1809 and later. 32.1 MB, self-contained — no
