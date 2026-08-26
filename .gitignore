@@ -1,0 +1,13 @@
+# Never commit After Dark binaries, artwork or disc images.
+*.AD
+*.ad
+*.SCR
+*.scr
+*.iso
+*.ISO
+ADXPL*.DLL
+adxpl*.dll
+
+__pycache__/
+*.pyc
+ad4.json
