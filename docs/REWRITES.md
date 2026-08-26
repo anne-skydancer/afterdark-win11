@@ -237,12 +237,16 @@ first — that is cheap, and it will move some modules between tiers.*
 8. **Add abstract simulations. Done.** `SATORI32.AD`, `SNAKE32.AD`, and
   `NIRVANA32.AD` add mixed pattern fields, generated perfect mazes with solved
   paths, and persistent flow fields. All controls match field-for-field.
-9. **Build the asset pipeline against one Tier 2 module.** `BORIS` is a good
+9. **Add clean-room physics. Done.** `GRAVITY32.AD`, `PUNCH32.AD`, and
+  `WORMS32.AD` add bouncing gravity balls, expanding geometric outlines, and
+  coherent segmented worms. Their original custom data is not copied; all
+  visuals and simulation are independent.
+10. **Build the asset pipeline against one Tier 2 module.** `BORIS` is a good
   target: two controls, recovered above, and a recognisable result that makes
   fidelity easy to judge.
-10. **Then breadth.** With runtime and pipeline done, Tier 1 becomes a
+11. **Then breadth.** With runtime and pipeline done, Tier 1 becomes a
    production line and Tier 2 becomes routine.
-11. **Tier 3 only by demand.** Each is a bespoke project; pick the ones people
+12. **Tier 3 only by demand.** Each is a bespoke project; pick the ones people
    actually miss.
 
 A reasonable v1 target is Tier 1 plus a handful of beloved Tier 2 modules —
@@ -296,6 +300,9 @@ admhost32 dist/rewrites dist/rewrites/SUNBURST32.AD --frames 30 --controls 60,0,
 admhost32 dist/rewrites dist/rewrites/SATORI32.AD --frames 30 --controls 6,13,0,7
 admhost32 dist/rewrites dist/rewrites/SNAKE32.AD --frames 80 --controls 1,0,0,0
 admhost32 dist/rewrites dist/rewrites/NIRVANA32.AD --frames 60 --controls 7,57,0,0
+admhost32 dist/rewrites dist/rewrites/GRAVITY32.AD --frames 40 --controls 4,24,1,0
+admhost32 dist/rewrites dist/rewrites/PUNCH32.AD --frames 40 --controls 0,65,9,0
+admhost32 dist/rewrites dist/rewrites/WORMS32.AD --frames 40 --controls 69,15,15,0
 ```
 
 All rewrites receive the same 348-byte block and lifecycle as an original

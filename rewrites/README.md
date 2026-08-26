@@ -85,13 +85,22 @@ The sixth batch adds abstract simulations:
 - `NIRVANA32.AD` preserves Color, Redraw Every, Activity, and Change Color while
 	tracing a persistent flow field using independent palette data.
 
+The seventh batch adds clean-room physics modules:
+
+- `GRAVITY32.AD` preserves ball count, size, and screen clearing while
+	simulating bouncing balls under gravity.
+- `PUNCH32.AD` preserves shape, size, and speed while expanding circles,
+	ovals, squares, or rectangles from changing origins.
+- `WORMS32.AD` preserves wiggle, segments, and worm count while moving coherent
+	segmented trails around the surface.
+
 Build it with:
 
 ```sh
 make rewrite
 ```
 
-The twenty results are written below `dist/rewrites`. The build generates the
+The twenty-three results are written below `dist/rewrites`. The build generates the
 documented control-definition resources, compiles them with `windres`, and
 links self-contained x86 DLLs. They do not need `ADXPL510.DLL` or the original
 16-bit modules. `make dist` builds them, and future installer builds place them

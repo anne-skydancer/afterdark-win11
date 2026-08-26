@@ -434,6 +434,25 @@ def main() -> None:
                           [25, 50, 75, 100], 0),
         ],
     )
+    write_module(
+        args.output, "gravity32", "Gravity",
+        [number_slider("Number Balls:", 1, 7, 1, 41),
+         number_slider("Size:", 10, 30, 100, 74),
+         checkbox("Clear Screen", True), none()],
+    )
+    write_module(
+        args.output, "punch32", "Punch Out",
+        [combo_box("Shape:", ["Circle", "Oval", "Square", "Rectangle", "Random"], 0),
+         number_slider("Size:", 10, 120, 100, 50),
+         number_slider("Speed:", 1, 9, 100, 100), none()],
+    )
+    write_module(
+        args.output, "worms32", "Can of Worms",
+        [string_slider("Wiggle:", ["Straight", "Weavy", "Crawly", "Wiggly"],
+                       [25, 50, 75, 100], 69),
+         number_slider("Segments:", 2, 20, 1, 70),
+         number_slider("Worms:", 1, 20, 1, 70), none()],
+    )
 
 
 if __name__ == "__main__":

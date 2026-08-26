@@ -137,6 +137,12 @@ rewrite: prepare-dist
 	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
 		-o $(DIST)/rewrites/NIRVANA32.AD rewrites/nirvana32.c rewrites/admkit.c \
 		$(DIST)/rewrite-build/nirvana32-res.o -lgdi32 -lm
+	$(WINDRES) $(DIST)/rewrite-build/gravity32.rc -O coff -o $(DIST)/rewrite-build/gravity32-res.o
+	$(CC32) $(CFLAGS) -DADM_GRAVITY -shared -Wl,--kill-at -o $(DIST)/rewrites/GRAVITY32.AD rewrites/physics32.c rewrites/admkit.c $(DIST)/rewrite-build/gravity32-res.o -lgdi32 -lm
+	$(WINDRES) $(DIST)/rewrite-build/punch32.rc -O coff -o $(DIST)/rewrite-build/punch32-res.o
+	$(CC32) $(CFLAGS) -DADM_PUNCH -shared -Wl,--kill-at -o $(DIST)/rewrites/PUNCH32.AD rewrites/physics32.c rewrites/admkit.c $(DIST)/rewrite-build/punch32-res.o -lgdi32 -lm
+	$(WINDRES) $(DIST)/rewrite-build/worms32.rc -O coff -o $(DIST)/rewrite-build/worms32-res.o
+	$(CC32) $(CFLAGS) -DADM_WORMS -shared -Wl,--kill-at -o $(DIST)/rewrites/WORMS32.AD rewrites/physics32.c rewrites/admkit.c $(DIST)/rewrite-build/worms32-res.o -lgdi32 -lm
 
 prepare-dist:
 	$(PYTHON) -c "from pathlib import Path; Path('$(DIST)').mkdir(parents=True, exist_ok=True)"
