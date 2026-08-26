@@ -28,7 +28,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from adlib import (SYSTEM_DLLS, Unsupported, credits,  # noqa: E402
-                   display_name, open_image)
+                   display_name, is_module_entry, open_image)
 
 SCAN_EXTS = {".ad", ".adm"}
 
@@ -45,7 +45,7 @@ def module_title(img, path: str) -> str:
 def extract(path: str) -> dict:
     img = open_image(path)
     exports = img.exports()
-    is_module = any(e == "Module" or e.upper() == "MODULE" for e in exports)
+    is_module = any(is_module_entry(e) for e in exports)
     engine = {k: v for k, v in img.imports().items()
               if k.lower() not in SYSTEM_DLLS}
     resources = img.resources()
@@ -121,6 +121,31 @@ def describe(control: dict) -> str:
     return f"    {kind}"
 
 
+def disambiguate(records: list[dict]) -> None:
+    """Qualify titles that appear more than once.
+
+    The AD4 disc ships RAIN.AD in both the AD40 and Classic sets, and two
+    entries both reading "Rain" is worse than useless: one runs, one cannot.
+    """
+    from collections import defaultdict
+    by_title: dict[str, list[dict]] = defaultdict(list)
+    for r in records:
+        if r.get("is_module"):
+            by_title[r["title"].lower()].append(r)
+
+    for items in by_title.values():
+        if len(items) < 2:
+            continue
+        by_gen: dict[str, list[dict]] = defaultdict(list)
+        for r in items:
+            by_gen["AD40" if r["generation"].startswith("AD4") else "Classic"].append(r)
+        for label, same in by_gen.items():
+            for r in same:
+                suffix = label if len(same) == 1 else \
+                    f"{label}, {os.path.splitext(r['file'])[0]}"
+                r["title"] = f"{r['title']} ({suffix})"
+
+
 def report(records: list[dict]) -> None:
     mods = [r for r in records if r.get("is_module")]
     configurable = [r for r in mods if r.get("controls")]
@@ -156,6 +181,7 @@ def main() -> int:
             return 2
     else:
         records = scan(args.path)
+    disambiguate(records)
     if not records:
         print("No .AD files found under that path.", file=sys.stderr)
         return 1

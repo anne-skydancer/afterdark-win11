@@ -29,8 +29,14 @@ Binaries examined (from the *After Dark 4.0 Deluxe* disc layout):
 | `ADE/FILES/CLASSIC/BORIS.AD` | **NE (16-bit)** | Classic-era module. |
 | `ADE/FILES/CLASSIC/ADXPL300.DLL` | (16-bit engine) | Separate engine for classic modules. |
 
-The disc carries **84 `.AD` modules**, split across `AD40/` (native 32-bit) and
-`CLASSIC/` (16-bit).
+The disc carries **84 `.AD` modules**: 22 in `AD40/` (native 32-bit), 61 in
+`CLASSIC/` (16-bit), and `ENGINE/STARRYNI.AD` — Starry Night, which is 32-bit,
+self-contained (it imports no engine DLL at all) and exports its entry point as
+the MSVC-decorated `_Module@4` rather than plain `Module`. That decorated form
+is exactly why `AFTERDAR.SCR` tries it first and falls back.
+
+Every one of the 84 was checked, not sampled: **23 are runnable** (PE32 with an
+entry point) and **61 are 16-bit**.
 
 ### 1.1 The AD4 module ABI
 
@@ -147,7 +153,8 @@ selected `.AD`, then drives the `Module` message loop, rendering into a
 window you control.
 
 - **Fidelity:** perfect — it is the original code.
-- **Coverage:** the ~22 `AD40/` modules only.
+- **Coverage:** 23 of the 84 modules on the disc — the 22 in `AD40/` plus
+  `ENGINE/STARRYNI.AD`. Verified against all 84, not extrapolated.
 - **Cost:** moderate. The work is pinning down `AD_MODULE32` and the engine's
   initialization sequence.
 - **Constraint:** the host that touches the modules **must be 32-bit x86**.

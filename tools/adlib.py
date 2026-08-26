@@ -20,7 +20,7 @@ from __future__ import annotations
 import struct
 
 __all__ = [
-    "Unsupported", "PEImage", "NEImage", "open_image",
+    "Unsupported", "PEImage", "NEImage", "open_image", "is_module_entry",
     "decode_control", "display_name", "credits",
     "CONTROL_TYPES", "SYSTEM_DLLS", "STD_RES_TYPES",
 ]
@@ -55,6 +55,17 @@ CONTROL_TYPES_FALLBACK = ("CTRL1", "CTRL2", "CTRL3", "CTRL4")
 
 class Unsupported(Exception):
     pass
+
+
+# A module's entry point is exported either undecorated (the Borland-built
+# modules that shipped) or as the MSVC __stdcall decoration. AFTERDAR.SCR tries
+# the decorated name first and falls back, and STARRYNI.AD -- the self-contained
+# default that ships in ENGINE/ -- is the one that needs it.
+ENTRY_NAMES = ("Module", "_Module@4")
+
+
+def is_module_entry(name: str) -> bool:
+    return name.upper() in ("MODULE", "_MODULE@4")
 
 
 def _cstr(buf: bytes, off: int = 0) -> str:

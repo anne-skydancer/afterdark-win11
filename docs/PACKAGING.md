@@ -130,6 +130,33 @@ That one Inno 7 directive is the whole 64-bit story: with it set,
 `ArchitecturesAllowed` and `ArchitecturesInstallIn64BitMode` both default to
 `x64compatible`, so no further architecture directives are needed.
 
+### Importing your screen savers
+
+The installer ships **no** modules — they are Berkeley Systems' copyrighted
+work — but an app with no screen savers would miss the point entirely. So Setup
+imports them from your own media instead:
+
+1. A wizard page asks for your After Dark CD or existing installation, with a
+   guess pre-filled (Program Files, `C:\AFTERDRK`, and any optical drive).
+2. Setup searches that folder for `ADXPL510.DLL`, depth-limited, because layouts
+   differ between the disc and an install.
+3. It copies `*.AD` and the engine into `{app}\modules`, and the Classic set
+   into `{app}\modules\classic`. The two must stay apart: `RAIN.AD` exists in
+   both — they are different screen savers, "Rainforest" and "Hard Rain".
+4. It seeds the machine-wide default to a module worth showing, preferring
+   Flying Toasters and falling back to Starry Night (which needs no engine).
+
+**This replaces a step Windows can no longer perform.** After Dark 4's own
+installer is 16-bit and cannot run on Windows 11 at all, so someone holding the
+CD has no supported way to install it. Pointing Setup at the disc does the job
+the original installer used to.
+
+Leaving the page blank is allowed; the app can be pointed at a folder later.
+
+For deploying to machines you own, `#define BundleModulesFrom` at the top of the
+`.iss` embeds your own modules into the installer. The result contains licensed
+content and is not redistributable.
+
 ### Deliberate omissions
 
 The installer exists to replace a ritual, so it does none of the ritual:

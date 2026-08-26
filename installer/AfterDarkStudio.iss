@@ -24,6 +24,26 @@
 ; each user's choice -- an installer that silently commandeers the screensaver is
 ; exactly the behaviour this project exists to replace. See docs/PACKAGING.md for
 ; how to enforce it across a fleet with Group Policy, which is the supported way.
+;
+; SCREEN SAVERS. This installer ships none, and must not: they are Berkeley
+; Systems' copyrighted work. Instead it IMPORTS them, at install time, from the
+; user's own disc or existing installation, and copies them into {app}\modules.
+;
+; That is not a workaround, it is the point. After Dark 4's own installer is
+; 16-bit and cannot run on Windows 11 at all, so someone holding the CD has no
+; supported way to install it. This installer replaces that broken step: point it
+; at the disc and everything works afterwards, with nothing licensed travelling
+; in the download.
+;
+; For deploying to machines you own, see BundleModulesFrom at the top of this
+; file -- it embeds your own modules into the installer. The result contains
+; licensed content and is not redistributable.
+
+; Set this to a folder to EMBED modules in the installer instead of importing
+; them at install time. For deploying to machines you own. The resulting
+; installer contains Berkeley Systems' copyrighted content and must not be
+; redistributed. Leave undefined for the normal, shippable build.
+; #define BundleModulesFrom "C:\Program Files (x86)\After Dark"
 
 #define AppName        "After Dark Studio"
 #define AppVersion     "0.1.0"
@@ -102,6 +122,14 @@ Source: "{#SourceDir}\admhost32.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceDir}\{#ScrName}"; DestDir: "{sys}"; Tasks: systemscr; \
     Flags: ignoreversion
 
+#ifdef BundleModulesFrom
+; Embedded modules -- see the warning at the top of this file.
+Source: "{#BundleModulesFrom}\*.AD";       DestDir: "{app}\modules"; \
+    Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
+Source: "{#BundleModulesFrom}\ADXPL*.DLL"; DestDir: "{app}\modules"; \
+    Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
+#endif
+
 [Registry]
 ; The .scr must not assume it sits beside admhost32.exe -- with the System32
 ; task it does not. This is how it finds the rest of the program.
@@ -124,6 +152,9 @@ Name: "{commondesktop}\{#AppName}";  Filename: "{app}\{#AppExe}"; Tasks: desktop
 Filename: "{app}\{#AppExe}"; Description: "Open {#AppName}"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
+; Imported at install time rather than installed by [Files], so the uninstaller
+; does not track them.
+Type: filesandordirs; Name: "{app}\modules"
 ; The machine-wide default is ours. Per-user settings are the user's own and
 ; are deliberately left alone -- an uninstall should not delete someone's
 ; preferences from their profile.
@@ -132,7 +163,14 @@ Type: dirifempty; Name: "{commonappdata}\AfterDarkStudio"
 
 [Code]
 const
-  DesktopKey = 'Control Panel\Desktop';
+  DesktopKey  = 'Control Panel\Desktop';
+  EngineAD4   = 'ADXPL510.DLL';
+  EngineAD3   = 'ADXPL300.DLL';
+  MaxDepth    = 5;
+
+var
+  SourcePage: TInputDirWizardPage;
+  FoundAD4Dir, FoundAD3Dir, FoundStarry: String;
 
 function InstallDirScr(): String;
 begin
@@ -144,51 +182,210 @@ begin
   Result := ExpandConstant('{sys}\{#ScrName}');
 end;
 
-{ Seed a machine-wide default so an account that has never opened Studio still
-  gets a working screensaver if it turns one on. Finding an After Dark
-  installation is best-effort: if there is none we write nothing, and the .scr
-  falls back to doing nothing rather than to something broken. }
-procedure SeedMachineDefault;
-var
-  Dir, Cfg, Engine, Module: String;
-  Candidates: array[0..4] of String;
-  I: Integer;
-  Found: Boolean;
+function ModulesDir(): String;
 begin
-  Candidates[0] := ExpandConstant('{commonpf32}\After Dark\FILES\AD40');
-  Candidates[1] := ExpandConstant('{commonpf32}\After Dark');
-  Candidates[2] := ExpandConstant('{commonpf}\After Dark\FILES\AD40');
-  Candidates[3] := 'C:\AFTERDRK\FILES\AD40';
-  Candidates[4] := 'C:\AFTERDRK';
+  Result := ExpandConstant('{app}\modules');
+end;
 
-  Found := False;
-  Dir := '';
-  for I := 0 to 4 do
+{ ---------------------------------------------------------------- searching }
+
+{ Depth-limited search for a file, returning the directory that holds it.
+  Layouts vary: the CD has ADE\FILES\AD40, an existing install may have almost
+  anything, so we look rather than assume. }
+function FindDirContaining(Root, Leaf: String; Depth: Integer): String;
+var
+  FindRec: TFindRec;
+  Sub: String;
+begin
+  Result := '';
+  if (Depth > MaxDepth) or not DirExists(Root) then Exit;
+
+  if FileExists(AddBackslash(Root) + Leaf) then
   begin
-    Engine := Candidates[I] + '\ADXPL510.DLL';
-    if FileExists(Engine) then
-    begin
-      Dir := Candidates[I];
-      Found := True;
-      Break;
-    end;
+    Result := Root;
+    Exit;
   end;
-  if not Found then Exit;
 
-  { TOASTERS.AD is the one everyone means by "After Dark". If it is absent we
-    leave the module blank; the .scr treats an unconfigured file as "nothing to
-    do" and simply blanks, which is the right failure. }
-  Module := Dir + '\TOASTERS.AD';
-  if not FileExists(Module) then Module := '';
+  if FindFirst(AddBackslash(Root) + '*', FindRec) then
+  try
+    repeat
+      if (FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY) <> 0 then
+      begin
+        if (FindRec.Name <> '.') and (FindRec.Name <> '..') then
+        begin
+          Sub := FindDirContaining(AddBackslash(Root) + FindRec.Name, Leaf, Depth + 1);
+          if Sub <> '' then
+          begin
+            Result := Sub;
+            Exit;
+          end;
+        end;
+      end;
+    until not FindNext(FindRec);
+  finally
+    FindClose(FindRec);
+  end;
+end;
 
+procedure ScanSource(Root: String);
+begin
+  FoundAD4Dir := FindDirContaining(Root, EngineAD4, 0);
+  FoundAD3Dir := FindDirContaining(Root, EngineAD3, 0);
+  FoundStarry := FindDirContaining(Root, 'STARRYNI.AD', 0);
+end;
+
+{ Somewhere plausible to start: an existing install, or a mounted disc. }
+function GuessSource(): String;
+var
+  Roots: array[0..4] of String;
+  I: Integer;
+  Drive: String;
+begin
+  Roots[0] := ExpandConstant('{commonpf32}\After Dark');
+  Roots[1] := ExpandConstant('{commonpf}\After Dark');
+  Roots[2] := 'C:\AFTERDRK';
+  Roots[3] := ExpandConstant('{commonpf32}\Berkeley Systems\After Dark');
+  Roots[4] := 'D:\';
+
+  for I := 0 to 4 do
+    if (Roots[I] <> '') and DirExists(Roots[I]) then
+      if FindDirContaining(Roots[I], EngineAD4, 0) <> '' then
+      begin
+        Result := Roots[I];
+        Exit;
+      end;
+
+  { A disc in any optical drive. Pascal Script has no Char loop variable. }
+  for I := Ord('D') to Ord('H') do
+  begin
+    Drive := Chr(I) + ':\';
+    if DirExists(Drive) then
+      if FindDirContaining(Drive, EngineAD4, 0) <> '' then
+      begin
+        Result := Drive;
+        Exit;
+      end;
+  end;
+
+  Result := '';
+end;
+
+{ ----------------------------------------------------------------- copying }
+
+function CopyPattern(SrcDir, DestDir, Pattern: String): Integer;
+var
+  FindRec: TFindRec;
+begin
+  Result := 0;
+  if not DirExists(SrcDir) then Exit;
+  ForceDirectories(DestDir);
+
+  if FindFirst(AddBackslash(SrcDir) + Pattern, FindRec) then
+  try
+    repeat
+      if (FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY) = 0 then
+      begin
+        WizardForm.StatusLabel.Caption := 'Importing ' + FindRec.Name + '...';
+        WizardForm.Refresh;
+        if FileCopy(AddBackslash(SrcDir) + FindRec.Name,
+                    AddBackslash(DestDir) + FindRec.Name, False) then
+          Result := Result + 1;
+      end;
+    until not FindNext(FindRec);
+  finally
+    FindClose(FindRec);
+  end;
+end;
+
+{ Import the user's own screen savers.
+
+  AD40 modules and the engine go to modules\, and the Classic set to
+  modules\classic -- they must stay apart because RAIN.AD exists in both.
+  Classic modules are 16-bit and cannot run on 64-bit Windows, but the
+  catalogue reads them, so they are worth importing. }
+function ImportModules(Root: String): Integer;
+var
+  N: Integer;
+begin
+  Result := 0;
+  ScanSource(Root);
+  if FoundAD4Dir = '' then Exit;
+
+  N := CopyPattern(FoundAD4Dir, ModulesDir(), '*.AD');
+  CopyPattern(FoundAD4Dir, ModulesDir(), 'ADXPL*.DLL');
+  Result := N;
+
+  if (FoundStarry <> '') and (CompareText(FoundStarry, FoundAD4Dir) <> 0) then
+    Result := Result + CopyPattern(FoundStarry, ModulesDir(), 'STARRYNI.AD');
+
+  if FoundAD3Dir <> '' then
+  begin
+    Result := Result + CopyPattern(FoundAD3Dir, ModulesDir() + '\classic', '*.AD');
+    CopyPattern(FoundAD3Dir, ModulesDir() + '\classic', 'ADXPL*.DLL');
+  end;
+end;
+
+{ ------------------------------------------------------------------- wizard }
+
+procedure InitializeWizard();
+var
+  Guess: String;
+begin
+  SourcePage := CreateInputDirPage(wpSelectTasks,
+    'Your After Dark screen savers',
+    'Where are your After Dark files?',
+    'After Dark Studio ships no screen savers -- it uses the ones from the copy' + #13#10 +
+    'you already own. Point Setup at your After Dark CD or an existing' + #13#10 +
+    'installation and the modules will be copied in.' + #13#10 + #13#10 +
+    'After Dark 4''s own installer is 16-bit and cannot run on Windows 11, so' + #13#10 +
+    'importing from the disc here replaces that step entirely.' + #13#10 + #13#10 +
+    'You can leave this blank and choose a folder later in the app.',
+    False, '');
+  SourcePage.Add('');
+
+  Guess := GuessSource();
+  SourcePage.Values[0] := Guess;
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+var
+  Root: String;
+begin
+  Result := True;
+  if CurPageID <> SourcePage.ID then Exit;
+
+  Root := Trim(SourcePage.Values[0]);
+  if Root = '' then Exit;   { skipping is allowed }
+
+  if not DirExists(Root) then
+  begin
+    MsgBox('That folder does not exist.', mbError, MB_OK);
+    Result := False;
+    Exit;
+  end;
+
+  ScanSource(Root);
+  if FoundAD4Dir = '' then
+    Result := MsgBox('No After Dark engine (' + EngineAD4 + ') was found under:'
+      + #13#10#13#10 + Root + #13#10#13#10
+      + 'Setup can continue, but no screen savers will be imported and the app '
+      + 'will have nothing to show until you point it at your files.'
+      + #13#10#13#10 + 'Continue anyway?', mbConfirmation, MB_YESNO) = IDYES;
+end;
+
+{ ------------------------------------------------------------- config seed }
+
+procedure WriteMachineDefault(InstallPath, ModulePath: String);
+var
+  Cfg: String;
+begin
   Cfg := ExpandConstant('{commonappdata}\AfterDarkStudio\saver.cfg');
   ForceDirectories(ExpandConstant('{commonappdata}\AfterDarkStudio'));
-
   SaveStringToFile(Cfg,
     '# Machine-wide default, written by Setup.' + #13#10 +
     '# A user''s own %LOCALAPPDATA%\AfterDarkStudio\saver.cfg overrides this.' + #13#10 +
-    'install=' + Dir + #13#10 +
-    'module=' + Module + #13#10 +
+    'install=' + InstallPath + #13#10 +
+    'module=' + ModulePath + #13#10 +
     'studio=' + ExpandConstant('{app}\{#AppExe}') + #13#10 +
     'controls=0,0,0,0' + #13#10 +
     'fps=30' + #13#10 +
@@ -198,14 +395,27 @@ begin
     'height=480' + #13#10, False);
 end;
 
-{ If this user's active screensaver is one of our copies, stand down cleanly.
-  Leaving SCRNSAVE.EXE pointing at a deleted file gives a screensaver that
-  silently does nothing and a settings dialog that looks broken.
+{ Pick something worth showing by default. Flying Toasters is what people mean
+  by After Dark; Starry Night is the engine's own default and needs no engine
+  DLL at all, so it is the safest fallback. }
+function DefaultModule(Dir: String): String;
+var
+  Candidates: array[0..3] of String;
+  I: Integer;
+begin
+  Candidates[0] := 'TOASTERS.AD';
+  Candidates[1] := 'STARRYNI.AD';
+  Candidates[2] := 'FISH.AD';
+  Candidates[3] := 'BADDOG.AD';
+  for I := 0 to 3 do
+    if FileExists(AddBackslash(Dir) + Candidates[I]) then
+    begin
+      Result := AddBackslash(Dir) + Candidates[I];
+      Exit;
+    end;
+  Result := '';
+end;
 
-  This can only fix the account running the uninstaller: the setting lives in
-  each user's own hive, and an uninstaller has no business walking other
-  people's profiles. Any other user whose screensaver was ours will pick a new
-  one from the dialog, which is a visible and recoverable state. }
 procedure DeactivateOurScreenSaver;
 var
   Current: String;
@@ -222,9 +432,32 @@ begin
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
+var
+  Root, Module: String;
+  Count: Integer;
 begin
-  if (CurStep = ssPostInstall) and WizardIsTaskSelected('machinedefault') then
-    SeedMachineDefault;
+  if CurStep <> ssPostInstall then Exit;
+
+  Root := Trim(SourcePage.Values[0]);
+  Count := 0;
+  if Root <> '' then
+  begin
+    WizardForm.StatusLabel.Caption := 'Importing your After Dark screen savers...';
+    Count := ImportModules(Root);
+  end;
+
+  { Seed a machine-wide default so every account has something that works. If
+    nothing was imported there is nothing to point at, and writing a config
+    naming files that are not there would be worse than writing none. }
+  if Count > 0 then
+  begin
+    Module := DefaultModule(ModulesDir());
+    if Module <> '' then WriteMachineDefault(ModulesDir(), Module);
+  end;
+
+  if (Root <> '') and (Count = 0) then
+    MsgBox('No screen savers were imported. You can point After Dark Studio at '
+      + 'your files from inside the app.', mbInformation, MB_OK);
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
