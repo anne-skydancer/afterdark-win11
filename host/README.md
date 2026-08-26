@@ -48,7 +48,25 @@ admhost32 <install-dir> <module.AD> [options]
   --bpp 8|32           surface depth (default 8)
   --controls a,b,c,d   iControlValue[0..3]
   --bmp FILE           write the final surface
+  --present            show a window and run until input (screensaver mode)
+  --parent HWND        render inside an existing window; implies --present
+  --stream             write raw frames to stdout for a UI to display
+  --scale MODE         integer (default) or stretch
 ```
+
+### --stream
+
+Feeds the Studio preview pane. Frames go to stdout, diagnostics to stderr:
+
+```
+magic 4 "ADFS" | version 4 | width 4 | height 4 | bpp 4 | stride 4
+palette 1024 (256 x BGRA, zeroed at 32bpp)
+---- then frames of stride*height, back to back ----
+```
+
+Fixed-size frames mean the reader needs no framing, and a module that dies is
+simply end-of-stream. The reader should scan for the magic rather than assume
+offset 0 — the CRT or the module can put something on stdout first.
 
 Example — a swarm of toasters, 30 seconds at 30 fps:
 
@@ -71,6 +89,12 @@ admhost32 "C:\Program Files (x86)\After Dark" TOASTERS.AD \
   `SetDIBColorTable` with those entries fixes it.
 - **Sound is attempted at `PREINITIALIZE`**, so an audio path needs handling
   (or silencing) early.
+- **Send one `PAINT` before the frame loop.** Modules repaint only damaged
+  rectangles per `DRAWFRAME`, so anything they have not touched keeps whatever
+  the surface started as — palette index 0, near-white in most modules. This
+  showed up as a large white band in both the screensaver and the preview and
+  was easy to misread as a capture artifact. The `--bmp` path never showed it
+  because it sends `PAINT` before saving.
 
 ## What it is not
 

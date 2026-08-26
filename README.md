@@ -35,7 +35,7 @@ controls exactly.
 ## The application
 
 ```
-AfterDark.Studio.exe   x64   catalogue, per-module settings, registration
+AfterDark.Studio.exe   x64   catalogue, per-module settings, live preview, registration
 AfterDarkModern.scr    x64   /s /p /c, full-screen windows, input, multi-monitor
 admhost32.exe          x86   loads ADXPL510.DLL + the module and renders
 ```

@@ -93,15 +93,20 @@
             <TextBlock Classes="muted" Text="{Binding Credits}" TextWrapping="Wrap"/>
           </StackPanel>
 
-          <!-- preview placeholder: stage 3 renders here via admhost32 -->
-          <Border Classes="card" Height="230">
+          <!-- live preview: frames streamed from admhost32 -->
+          <Border Classes="card" Height="260" ClipToBounds="True">
             <Grid>
-              <Border Background="#0A0B10" CornerRadius="9"/>
-              <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="6">
+              <Border Background="#000000" CornerRadius="9"/>
+              <Image Name="PreviewImage" Stretch="Uniform"
+                     RenderOptions.BitmapInterpolationMode="None"/>
+              <StackPanel Name="PreviewMessage" VerticalAlignment="Center"
+                          HorizontalAlignment="Center" Spacing="6">
                 <TextBlock Text="▶" FontSize="30" HorizontalAlignment="Center"
                            Foreground="{StaticResource Accent}"/>
-                <TextBlock Classes="muted" HorizontalAlignment="Center"
-                           Text="Live preview — rendered by admhost32"/>
+                <TextBlock Name="PreviewMessageText" Classes="muted"
+                           HorizontalAlignment="Center" TextWrapping="Wrap"
+                           MaxWidth="380" TextAlignment="Center"
+                           Text="Starting preview…"/>
               </StackPanel>
             </Grid>
           </Border>

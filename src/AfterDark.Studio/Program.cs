@@ -38,6 +38,10 @@ internal static class Program
         LabelOverrides.Load(Path.Combine(AppContext.BaseDirectory, "data", "labels.json"))
                       .Apply(modules);
 
+        // Dev aid: on a non-Windows build machine the host can run under Wine.
+        if (Environment.GetEnvironmentVariable("AD_HOST_LAUNCHER") is { Length: > 0 } launcher)
+            Services.ModulePreview.Launcher = launcher;
+
         var vm = new MainViewModel(settings, modules);
         // Optional 4th arg: pre-select a module by file name, for review shots.
         if (preselect is { Length: > 0 } pick)
@@ -52,9 +56,15 @@ internal static class Program
         };
         window.Show();
 
-        // Let layout and bindings settle before capturing.
-        for (int i = 0; i < 12; i++)
-            Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        // Let layout, bindings and (if running) the preview settle before capturing.
+        int seconds = int.TryParse(Environment.GetEnvironmentVariable("AD_SHOT_WAIT"), out var s2)
+            ? s2 : 0;
+        var until = DateTime.UtcNow.AddSeconds(seconds);
+        do
+        {
+            for (int i = 0; i < 12; i++) Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+            if (seconds > 0) Thread.Sleep(50);
+        } while (DateTime.UtcNow < until);
 
         var frame = window.CaptureRenderedFrame();
         if (frame is null) { Console.Error.WriteLine("capture failed"); return 1; }

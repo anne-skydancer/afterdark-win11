@@ -185,7 +185,8 @@ concern, not a module concern — the modules are left untouched.
 | Problem | Approach |
 |---|---|
 | **Frame pacing.** `DRAWFRAME` is called in a bare loop; on modern hardware modules run absurdly fast. | Drive `DRAWFRAME` from a fixed-timestep clock. Make the target rate a per-module setting — some modules were tuned for ~15 fps and look wrong at 60. |
-| **Palettes.** Modules expect an 8-bit palettized display and a real hardware palette. | Give the module an 8-bit DIB section and its own `HPALETTE`. The host owns the composite: blit through the palette to a 32-bit surface. Modules never touch the real desktop DC. |
+| **Palettes.** Modules expect an 8-bit palettized display and a real hardware palette. | Give the module an 8-bit DIB section and its own `HPALETTE` built from its `PAL` resource, and `SetDIBColorTable` from the same entries. Without that you get a correct image in entirely wrong colours. Modules never touch the real desktop DC. |
+| **Partial repaints.** Modules redraw only damaged rectangles per `DRAWFRAME`. | Send one `PAINT` (message 9) after `BLANK`, and again whenever the target is resized. Otherwise untouched pixels keep the surface's initial value — palette index 0, near-white in most modules. |
 | **Resolution.** Authored for 640×480 / 800×600. | Render at native module resolution, then integer-scale (nearest-neighbour) to the display. Integer scaling preserves the pixel art; smooth scaling destroys it. Offer letterbox / stretch / tile. |
 | **Multi-monitor.** The engine has `GetMonitorCount` / `BlankOtherMonitors`, but the era's assumptions are shaky. | Safest: one host process per monitor, each with its own module instance. Also enables different modules per display. |
 | **Per-monitor DPI.** Did not exist. | Declare the host DPI-aware and do the scaling yourself; never let Windows bitmap-stretch the window. |
@@ -201,8 +202,12 @@ concern, not a module concern — the modules are left untouched.
   can show real artwork — modules carry `BITMAP` and `PAL` resources, readable
   without executing anything.
 - **Module page.** Live preview pane, the module's own controls beside it, and
-  a preset bar. Changing a control restarts or updates the preview immediately —
-  the thing the original UI could never do well.
+  a preset bar. Changing a control restarts the preview after a short debounce —
+  the thing the original UI could never do well. **Built**: the preview runs the
+  real module in `admhost32 --stream` and draws its frames as an ordinary
+  bitmap. Frames are piped rather than the host being embedded as a native child
+  window, because hosted native windows render above framework content and will
+  not clip to a scroll viewport — which this page needs them to do.
 - **Presets.** Named configurations per module. "Flying Toasters / Swarm,
   babies, no music" is a preset, not a setting you rebuild each time.
 - **Randomiser.** The original had one; it is a scheduler over module + preset,

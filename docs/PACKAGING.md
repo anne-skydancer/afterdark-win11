@@ -196,7 +196,26 @@ modern equivalent and needs none.
 
 ---
 
-## 5. Building
+## 5. The live preview
+
+Studio's preview pane runs the real module. It starts
+`admhost32 --stream`, reads frames from the host's stdout and draws them as a
+normal bitmap.
+
+**Why pipe frames instead of embedding the host's window.** The `--parent`
+handoff the `.scr` uses would work here too, but a hosted native window renders
+above the framework's own content and will not clip to a scroll viewport. The
+settings page is a scrolling column, so an embedded renderer would spill over
+the controls and the page edges. Piping also decouples the preview from a window
+handle's lifetime and turns a crashed module into an end-of-stream the UI can
+report, rather than a dead window it cannot detect.
+
+Control changes restart the preview after a 400 ms debounce, so dragging a
+slider across ten stops starts one host, not ten.
+
+---
+
+## 7. Building
 
 ```
 make dist        # everything into dist/

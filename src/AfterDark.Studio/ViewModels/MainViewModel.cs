@@ -41,10 +41,20 @@ public sealed class ControlViewModel : Bindable
 
     public IReadOnlyList<ControlOption> Options => _c.Options;
 
+    /// <summary>Raised on a real change, so the preview restarts with the new value.</summary>
+    public event Action? Changed;
+
     public int Value
     {
         get => _value;
-        set { if (Set(ref _value, value)) { Raise(nameof(SelectedOption)); Raise(nameof(IsChecked)); Raise(nameof(Summary)); } }
+        set
+        {
+            if (!Set(ref _value, value)) return;
+            Raise(nameof(SelectedOption));
+            Raise(nameof(IsChecked));
+            Raise(nameof(Summary));
+            Changed?.Invoke();
+        }
     }
 
     // Every row instantiates all three editors and hides the inapplicable ones.
@@ -92,9 +102,14 @@ public sealed class ModuleViewModel : Bindable
         foreach (var c in m.Configurable)
         {
             int v = values is not null && c.Slot < values.Length ? values[c.Slot] : c.DefaultValue;
-            Controls.Add(new ControlViewModel(c, v));
+            var cvm = new ControlViewModel(c, v);
+            cvm.Changed += () => ControlChanged?.Invoke();
+            Controls.Add(cvm);
         }
     }
+
+    /// <summary>Any of this module's controls changed value.</summary>
+    public event Action? ControlChanged;
 
     public string Title => Module.Title;
     public string FileName => Module.FileName;
@@ -175,7 +190,14 @@ public sealed class MainViewModel : Bindable
     public ModuleViewModel? Selected
     {
         get => _selected;
-        set { if (Set(ref _selected, value)) { Raise(nameof(HasSelection)); Raise(nameof(SelectionIs16Bit)); } }
+        set
+        {
+            if (_selected is not null) _selected.ControlChanged -= NotifySettingsChanged;
+            if (!Set(ref _selected, value)) return;
+            if (_selected is not null) _selected.ControlChanged += NotifySettingsChanged;
+            Raise(nameof(HasSelection));
+            Raise(nameof(SelectionIs16Bit));
+        }
     }
 
     public bool HasSelection => _selected is not null;
@@ -186,6 +208,14 @@ public sealed class MainViewModel : Bindable
 
     public string CountLine =>
         $"{Visible.Count} shown · {RunnableCount} runnable · {LegacyCount} legacy 16-bit";
+
+    /// <summary>Preview pacing. Lower than the screensaver's, to stay cheap.</summary>
+    public int PreviewFps => Math.Clamp(_settings.TargetFps, 5, 60);
+
+    /// <summary>Raised when any control value changes, so the preview can restart.</summary>
+    public event Action? SettingsChanged;
+
+    internal void NotifySettingsChanged() => SettingsChanged?.Invoke();
 
     public int TimeoutMinutes
     {

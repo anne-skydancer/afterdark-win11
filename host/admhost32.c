@@ -20,6 +20,8 @@
  */
 
 #include <windows.h>
+#include <fcntl.h>
+#include <io.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,36 +35,41 @@
 static const char *g_step = "startup";
 static int         g_verbose = 1;
 
+/* Diagnostics normally go to stdout. In --stream mode stdout carries binary
+ * frame data, so they move to stderr and stdout is opened in binary mode. */
+static FILE       *g_out;
+#define AD_OUT (g_out ? g_out : stdout)
+
 static void step(const char *what)
 {
     g_step = what;
-    if (g_verbose) printf("  [ .. ] %s\n", what);
+    if (g_verbose) fprintf(AD_OUT, "  [ .. ] %s\n", what);
 }
 
 static void ok(const char *fmt, ...)
 {
     va_list ap; va_start(ap, fmt);
-    printf("  [ ok ] "); vprintf(fmt, ap); printf("\n");
+    fprintf(AD_OUT, "  [ ok ] "); vfprintf(AD_OUT, fmt, ap); fprintf(AD_OUT, "\n");
     va_end(ap);
 }
 
 static void fail(const char *fmt, ...)
 {
     va_list ap; va_start(ap, fmt);
-    printf("  [FAIL] "); vprintf(fmt, ap);
-    printf("  (last error %lu)\n", (unsigned long)GetLastError());
+    fprintf(AD_OUT, "  [FAIL] "); vfprintf(AD_OUT, fmt, ap);
+    fprintf(AD_OUT, "  (last error %lu)\n", (unsigned long)GetLastError());
     va_end(ap);
 }
 
 static LONG CALLBACK crash_filter(EXCEPTION_POINTERS *ep)
 {
-    printf("\n=========================================================\n");
-    printf("  CRASH during: %s\n", g_step);
-    printf("  code 0x%08lX at 0x%08lX\n",
+    fprintf(AD_OUT, "\n=========================================================\n");
+    fprintf(AD_OUT, "  CRASH during: %s\n", g_step);
+    fprintf(AD_OUT, "  code 0x%08lX at 0x%08lX\n",
            (unsigned long)ep->ExceptionRecord->ExceptionCode,
            (unsigned long)(ULONG_PTR)ep->ExceptionRecord->ExceptionAddress);
-    printf("=========================================================\n");
-    fflush(stdout);
+    fprintf(AD_OUT, "=========================================================\n");
+    fflush(AD_OUT);
     return EXCEPTION_CONTINUE_SEARCH;
 }
 
@@ -123,6 +130,63 @@ static int surface_variety(const void *bits, size_t len)
     for (i = 0; i < len; i++) seen[((const unsigned char *)bits)[i]] = 1;
     for (i = 0; i < 256; i++) n += seen[i];
     return n;
+}
+
+/* ----------------------------------------------------------------- stream */
+
+/*
+ * --stream writes raw frames to stdout for a UI to display. This exists so a
+ * preview pane does not have to embed a native child window: hosted native
+ * windows render above the framework's own content and will not clip to a
+ * scroll viewport, which is exactly what a settings page needs them to do.
+ *
+ * Wire format, little-endian, written once then frames back to back:
+ *
+ *   magic     4    "ADFS"
+ *   version   4    1
+ *   width     4
+ *   height    4
+ *   bpp       4    8 or 32
+ *   stride    4    bytes per row, as the DIB has them
+ *   palette   1024 256 * BGRA, zeroed when bpp is 32
+ *   ---- then, repeating ----
+ *   frame     stride * height
+ *
+ * Frames are fixed size, so a reader needs no framing. A dead module shows up
+ * as end of stream, which is the correct thing for a preview to notice.
+ */
+
+#define ADFS_MAGIC   0x53464441u   /* "ADFS" little-endian */
+#define ADFS_VERSION 1
+
+static int stream_write(const void *data, size_t n)
+{
+    return fwrite(data, 1, n, stdout) == n;
+}
+
+static int stream_header(int w, int h, int bpp, DWORD stride, HDC dc)
+{
+    unsigned int hdr[6];
+    unsigned char pal[1024];
+
+    hdr[0] = ADFS_MAGIC; hdr[1] = ADFS_VERSION;
+    hdr[2] = (unsigned int)w; hdr[3] = (unsigned int)h;
+    hdr[4] = (unsigned int)bpp; hdr[5] = (unsigned int)stride;
+
+    ZeroMemory(pal, sizeof(pal));
+    if (bpp <= 8) {
+        RGBQUAD tbl[256];
+        UINT got = GetDIBColorTable(dc, 0, 256, tbl), i;
+        for (i = 0; i < got && i < 256; i++) {
+            pal[i * 4 + 0] = tbl[i].rgbBlue;
+            pal[i * 4 + 1] = tbl[i].rgbGreen;
+            pal[i * 4 + 2] = tbl[i].rgbRed;
+            pal[i * 4 + 3] = 0xFF;
+        }
+    }
+    if (!stream_write(hdr, sizeof(hdr))) return 0;
+    if (!stream_write(pal, sizeof(pal))) return 0;
+    return fflush(stdout) == 0;
 }
 
 /* ---------------------------------------------------------------- present */
@@ -274,19 +338,19 @@ static int send_msg(DWORD m, DWORD param)
     r = g_proc(&g_block);
 
     if (g_block.szMessage[0])
-        printf("         module says: \"%s\"\n", g_block.szMessage);
+        fprintf(AD_OUT, "         module says: \"%s\"\n", g_block.szMessage);
     if (r == AD_OK)
         ok("%s -> 0 (AD_OK)", label);
     else if (r == AD_RESTART_ME)
         ok("%s -> 3 (AD_RESTART_ME)", label);
     else
-        printf("  [ ?? ] %s -> %d\n", label, r);
+        fprintf(AD_OUT, "  [ ?? ] %s -> %d\n", label, r);
     return r;
 }
 
 static void usage(void)
 {
-    printf(
+    fprintf(AD_OUT, 
 "admhost32 -- minimal host for After Dark 4 modules\n"
 "\n"
 "usage: admhost32 <install-dir> <module.AD> [options]\n"
@@ -302,6 +366,8 @@ static void usage(void)
 "  --bmp FILE      write the final surface (default admhost32.bmp)\n"
 "  --fps N         frame pacing; 0 = unpaced like the original (default 30)\n"
 "  --present       show a window and run until input (screensaver mode)\n"
+"  --stream        write raw frames to stdout for a UI to display; all\n"
+"                  diagnostics move to stderr (see the format in the source)\n"
 "  --parent HWND   render inside an existing window (the .scr's preview or\n"
 "                  full-screen surface); implies --present\n"
 "  --scale MODE    integer (default) or stretch\n"
@@ -313,7 +379,7 @@ int main(int argc, char **argv)
     char install[MAX_PATH], modpath[MAX_PATH], engine[MAX_PATH];
     const char *bmp = "admhost32.bmp";
     int  frames = 60, w = 640, h = 480, bpp = 8, fps = 30;
-    int  present = 0, integer_scale = 1;
+    int  present = 0, integer_scale = 1, stream = 0;
     HWND parent = NULL;
     int  ctl[4] = {0,0,0,0};
     int  i, r, restarts = 0;
@@ -339,32 +405,40 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--size") && i+1 < argc) sscanf(argv[++i], "%dx%d", &w, &h);
         else if (!strcmp(argv[i], "--controls") && i+1 < argc)
             sscanf(argv[++i], "%d,%d,%d,%d", &ctl[0], &ctl[1], &ctl[2], &ctl[3]);
+        else if (!strcmp(argv[i], "--stream")) stream = 1;
         else if (!strcmp(argv[i], "--present")) present = 1;
         else if (!strcmp(argv[i], "--parent") && i+1 < argc)
             { parent = (HWND)(ULONG_PTR)strtoul(argv[++i], NULL, 0); present = 1; }
         else if (!strcmp(argv[i], "--scale") && i+1 < argc)
             integer_scale = strcmp(argv[++i], "stretch") != 0;
         else if (!strcmp(argv[i], "--quiet")) g_verbose = 0;
-        else { printf("unknown option: %s\n", argv[i]); usage(); return 2; }
+        else { fprintf(AD_OUT, "unknown option: %s\n", argv[i]); usage(); return 2; }
     }
 
     if (sizeof(AD_MODULE32) != AD_MODULE32_SIZE) {
-        printf("FATAL: AD_MODULE32 is %d bytes, must be %d. "
+        fprintf(AD_OUT, "FATAL: AD_MODULE32 is %d bytes, must be %d. "
                "Are you building 32-bit?\n",
                (int)sizeof(AD_MODULE32), AD_MODULE32_SIZE);
         return 3;
     }
     if (sizeof(void *) != 4) {
-        printf("FATAL: this is a %d-bit build. After Dark modules are 32-bit "
+        fprintf(AD_OUT, "FATAL: this is a %d-bit build. After Dark modules are 32-bit "
                "and cannot be loaded by a 64-bit process.\n",
                (int)(sizeof(void *) * 8));
         return 3;
     }
 
+    if (stream) {
+        /* stdout is now a binary frame pipe; keep text off it entirely. */
+        g_out = stderr;
+        _setmode(_fileno(stdout), _O_BINARY);
+        g_verbose = 0;
+    }
+
     AddVectoredExceptionHandler(1, crash_filter);
 
-    printf("admhost32 -- After Dark 4 module host (spike)\n");
-    printf("  surface %dx%d @ %d bpp, %d frames, fps %d\n\n", w, h, bpp, frames, fps);
+    fprintf(AD_OUT, "admhost32 -- After Dark 4 module host (spike)\n");
+    fprintf(AD_OUT, "  surface %dx%d @ %d bpp, %d frames, fps %d\n\n", w, h, bpp, frames, fps);
 
     /* -- 1. the engine, from the user's own install -- */
     wsprintfA(engine, "%s\\%s", install, AD_ENGINE_DLL);
@@ -376,7 +450,7 @@ int main(int argc, char **argv)
     hEngine = LoadLibraryA(engine);
     if (!hEngine) {
         fail("could not load %s", engine);
-        printf("\n  The engine must load before any module: modules import\n"
+        fprintf(AD_OUT, "\n  The engine must load before any module: modules import\n"
                "  150-300 functions from it and will not bind without it.\n");
         return 1;
     }
@@ -497,19 +571,63 @@ int main(int argc, char **argv)
         else {
             pal = CreateHalftonePalette(mem);
             if (pal) { SelectPalette(mem, pal, FALSE); RealizePalette(mem); }
-            printf("  [ ?? ] no usable PAL resource; falling back to a halftone palette\n");
+            fprintf(AD_OUT, "  [ ?? ] no usable PAL resource; falling back to a halftone palette\n");
         }
     }
 
     /* -- 7. drive the lifecycle -- */
-    printf("\n--- lifecycle ---\n");
+    fprintf(AD_OUT, "\n--- lifecycle ---\n");
     if (send_msg(AD_MSG_MODULESELECTED, 0) != AD_OK)
-        printf("  (module declined selection; continuing anyway)\n");
+        fprintf(AD_OUT, "  (module declined selection; continuing anyway)\n");
 
 restart:
     if (send_msg(AD_MSG_PREINITIALIZE, 0) != AD_OK)
-        printf("  (PREINITIALIZE non-zero)\n");
+        fprintf(AD_OUT, "  (PREINITIALIZE non-zero)\n");
     send_msg(AD_MSG_BLANK, 0);
+
+    /* Modules repaint only damaged rectangles each DRAWFRAME. Without one full
+     * repaint first, every pixel the module has not touched yet keeps whatever
+     * the surface started as -- palette index 0, which is near-white in most
+     * modules. The BMP path never showed this because it sends PAINT before
+     * saving; the live paths must do it up front. */
+    send_msg(AD_MSG_PAINT, 0);
+
+    if (stream) {
+        /* Render until the reader goes away. No window, no input: the UI owns
+         * both. Writing to a closed pipe fails, which is how we learn to stop. */
+        DWORD period = (fps > 0) ? (DWORD)(1000 / fps) : 0;
+        long  sent = 0;
+
+        if (!stream_header(w, h, bpp, stride, mem)) {
+            fail("could not write the stream header");
+            goto teardown;
+        }
+        while (!g_quit) {
+            DWORD t0 = GetTickCount();
+
+            g_block.dwMessage = AD_MSG_DRAWFRAME;
+            g_block.dwParam   = 0;
+            g_step = "Module(DRAWFRAME)";
+            r = g_proc(&g_block);
+            if (r == AD_RESTART_ME) {
+                g_block.dwMessage = AD_MSG_PREINITIALIZE; g_proc(&g_block);
+                g_block.dwMessage = AD_MSG_BLANK;         g_proc(&g_block);
+            } else if (r != AD_OK) break;
+
+            if (!stream_write(bits, imgbytes)) break;   /* reader closed the pipe */
+            if (fflush(stdout) != 0) break;
+            sent++;
+            if (frames > 0 && sent >= frames) break;
+
+            if (period) {
+                DWORD dt = GetTickCount() - t0;
+                if (dt < period) Sleep(period - dt);
+            }
+        }
+        g_verbose = 1;
+        ok("streamed %ld frame(s)", sent);
+        goto teardown;
+    }
 
     if (present) {
         /* Run until the user does something. This is the screensaver loop:
@@ -518,6 +636,7 @@ restart:
         HDC   wdc = GetDC(wnd);
         RECT  rc;
         MSG   msg;
+        LONG  last_w = -1, last_h = -1;
 
         g_verbose = 0;
         while (!g_quit) {
@@ -540,6 +659,14 @@ restart:
             } else if (r != AD_OK) break;
 
             GetClientRect(wnd, &rc);
+            if (rc.right != last_w || rc.bottom != last_h) {
+                /* The surface is unchanged, but a resized target needs the
+                 * module's full picture, not just this frame's damage. */
+                g_block.dwMessage = AD_MSG_PAINT;
+                g_block.dwParam   = 0;
+                g_proc(&g_block);
+                last_w = rc.right; last_h = rc.bottom;
+            }
             present_blit(wdc, rc.right, rc.bottom, mem, w, h, integer_scale);
 
             if (period) {
@@ -553,7 +680,7 @@ restart:
         goto teardown;
     }
 
-    printf("\n--- %d frames ---\n", frames);
+    fprintf(AD_OUT, "\n--- %d frames ---\n", frames);
     {
         DWORD period = (fps > 0) ? (DWORD)(1000 / fps) : 0;
         int   drawn  = 0;
@@ -566,13 +693,13 @@ restart:
             r = g_proc(&g_block);
             drawn++;
             if (r == AD_RESTART_ME) {
-                printf("  frame %d: module asked to restart\n", i);
-                if (++restarts > 3) { printf("  too many restarts, stopping\n"); break; }
+                fprintf(AD_OUT, "  frame %d: module asked to restart\n", i);
+                if (++restarts > 3) { fprintf(AD_OUT, "  too many restarts, stopping\n"); break; }
                 g_verbose = 1;
                 goto restart;
             }
             if (r != AD_OK) {
-                printf("  frame %d: returned %d%s%s\n", i, r,
+                fprintf(AD_OUT, "  frame %d: returned %d%s%s\n", i, r,
                        g_block.szMessage[0] ? " -- " : "",
                        g_block.szMessage[0] ? g_block.szMessage : "");
                 break;
@@ -589,12 +716,12 @@ restart:
     send_msg(AD_MSG_PAINT, 0);
 
     /* -- 8. did anything actually get drawn? -- */
-    printf("\n--- result ---\n");
+    fprintf(AD_OUT, "\n--- result ---\n");
     {
         int variety = surface_variety(bits, imgbytes);
-        printf("  distinct byte values on the surface: %d\n", variety);
+        fprintf(AD_OUT, "  distinct byte values on the surface: %d\n", variety);
         if (variety <= 1)
-            printf("  [ ?? ] surface is uniform -- the module drew nothing we can see\n");
+            fprintf(AD_OUT, "  [ ?? ] surface is uniform -- the module drew nothing we can see\n");
         else
             ok("surface has content");
     }
@@ -604,7 +731,7 @@ restart:
 
     /* -- 9. teardown, in the host's order -- */
 teardown:
-    printf("\n--- teardown ---\n");
+    fprintf(AD_OUT, "\n--- teardown ---\n");
     send_msg(AD_MSG_CLOSE, 0);
     send_msg(AD_MSG_MODULEDESELECTED, 0);
 
@@ -619,6 +746,6 @@ teardown:
     FreeLibrary(hMod);
     FreeLibrary(hEngine);
 
-    printf("\ndone.\n");
+    fprintf(AD_OUT, "\ndone.\n");
     return 0;
 }
