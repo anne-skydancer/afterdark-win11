@@ -116,6 +116,11 @@ Source: "{#SourceDir}\{#ScrName}"; DestDir: "{app}"; Flags: ignoreversion
 ; executable runs perfectly well from 64-bit Program Files.
 Source: "{#SourceDir}\admhost32.exe"; DestDir: "{app}"; Flags: ignoreversion
 
+; --- independent clean-room Classic rewrites -----------------------------
+; These contain no Berkeley Systems code or assets and need no ADXPL engine.
+Source: "{#SourceDir}\rewrites\*.AD"; DestDir: "{app}\modules\rewrites"; \
+  Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
+
 ; Optional copy so the screensaver appears in every user's Windows dropdown.
 ; {sys} is the native System32 in a 64-bit install, which is what our x64 .scr
 ; wants. The copy still finds admhost32.exe via the HKLM InstallDir below.

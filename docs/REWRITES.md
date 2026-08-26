@@ -218,12 +218,16 @@ first — that is cheap, and it will move some modules between tiers.*
   now provides the bounded canvas primitives shared by `SPIRAL32.AD`,
   `TUNNEL32.AD`, and `ZOT32.AD`. All three preserve their recovered controls,
   embed independent palettes, and contain no original assets.
-4. **Build the asset pipeline against one Tier 2 module.** `BORIS` is a good
+4. **Expand the asset-free batch. Done.** `WARP32.AD`, `SPHERES32.AD`, and
+  `STAINED32.AD` use the same runtime for perspective stars, accumulated
+  circles, and filled stained-glass cells. Their controls match the originals
+  field-for-field and their generated palettes contain no original data.
+5. **Build the asset pipeline against one Tier 2 module.** `BORIS` is a good
   target: two controls, recovered above, and a recognisable result that makes
   fidelity easy to judge.
-5. **Then breadth.** With runtime and pipeline done, Tier 1 becomes a
+6. **Then breadth.** With runtime and pipeline done, Tier 1 becomes a
    production line and Tier 2 becomes routine.
-6. **Tier 3 only by demand.** Each is a bespoke project; pick the ones people
+7. **Tier 3 only by demand.** Each is a bespoke project; pick the ones people
    actually miss.
 
 A reasonable v1 target is Tier 1 plus a handful of beloved Tier 2 modules —
@@ -262,6 +266,9 @@ admhost32 dist/rewrites dist/rewrites/SHAPES32.AD --frames 80 --controls 0,1,0,0
 admhost32 dist/rewrites dist/rewrites/SPIRAL32.AD --frames 30 --controls 54,28,32,0
 admhost32 dist/rewrites dist/rewrites/TUNNEL32.AD --frames 30 --controls 0,1,0,0
 admhost32 dist/rewrites dist/rewrites/ZOT32.AD --frames 40 --controls 67,0,75,0
+admhost32 dist/rewrites dist/rewrites/WARP32.AD --frames 30 --controls 0,71,0,0
+admhost32 dist/rewrites dist/rewrites/SPHERES32.AD --frames 80 --controls 73,27,30,0
+admhost32 dist/rewrites dist/rewrites/STAINED32.AD --frames 20 --controls 10,100,100,0
 ```
 
 All rewrites receive the same 348-byte block and lifecycle as an original

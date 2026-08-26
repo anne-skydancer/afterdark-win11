@@ -17,6 +17,14 @@ def none() -> bytes:
     return bytes(32)
 
 
+def checkbox(title: str, checked: bool) -> bytes:
+    blob = bytearray(32)
+    struct.pack_into("<H", blob, 0, 5)
+    blob[2:16] = title_field(title)
+    struct.pack_into("<h", blob, 24, int(checked))
+    return bytes(blob)
+
+
 def number_slider(
     title: str,
     lower: int,
@@ -175,6 +183,45 @@ def main() -> None:
             string_slider("How Often:",
                           ["Rarely", "Sometimes", "Often", "Stormy!"],
                           [25, 50, 75, 100], 62),
+            none(),
+        ],
+    )
+    write_module(
+        args.output,
+        "warp32",
+        "Warp!",
+        [
+            string_slider(
+                "Speed:",
+                ["Fast In", "Medium In", "Slow In", "Impulse In",
+                 "Impulse Out", "Slow Out", "Medium Out", "Fast Out"],
+                [12, 25, 38, 45, 55, 75, 88, 100],
+                0,
+            ),
+            number_slider("Stars:", 1, 200, 1, 71),
+            combo_box("Size:", ["Small", "Big", "Both"], 0),
+            checkbox("Color", False),
+        ],
+    )
+    write_module(
+        args.output,
+        "spheres32",
+        "Spheres",
+        [
+            number_slider("Max Size:", 10, 100, 100, 73, "%", 2),
+            number_slider("Offset:", 0, 10, 100, 27),
+            number_slider("Clear Every:", 1, 200, 100, 30),
+            checkbox("Clear Screen F", False),
+        ],
+    )
+    write_module(
+        args.output,
+        "stained32",
+        "Stained Glass",
+        [
+            number_slider("Complexity:", 0, 100, 1, 10, "%", 2),
+            number_slider("Duplication:", 0, 100, 1, 100, "%", 2),
+            number_slider("Color:", 0, 100, 1, 100, "%", 2),
             none(),
         ],
     )

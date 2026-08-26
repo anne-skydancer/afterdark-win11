@@ -31,5 +31,9 @@ void adm_rectangle(ADM_CANVAS *canvas, int left, int top, int right, int bottom,
                    uint32_t color);
 void adm_round_rectangle(ADM_CANVAS *canvas, int left, int top, int right,
                          int bottom, int radius, uint32_t color);
+void adm_ellipse(ADM_CANVAS *canvas, int center_x, int center_y,
+                 int radius_x, int radius_y, uint32_t color);
+void adm_filled_triangle(ADM_CANVAS *canvas, int x0, int y0, int x1, int y1,
+                         int x2, int y2, uint32_t fill, uint32_t outline);
 
 #endif

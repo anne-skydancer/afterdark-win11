@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Forms;
 using AfterDark.Catalog;
@@ -208,57 +207,12 @@ public partial class App : System.Windows.Application
 
     private static Drawing.Icon CreateTrayDrawingIcon()
     {
-        const int size = 32;
-        using var bitmap = new Drawing.Bitmap(size, size, Drawing.Imaging.PixelFormat.Format32bppArgb);
-
-        void Pixel(int x, int y, byte red, byte green, byte blue) =>
-            bitmap.SetPixel(x, y, Drawing.Color.FromArgb(255, red, green, blue));
-
-        for (int y = 0; y < size; y++)
-        for (int x = 0; x < size; x++)
-        {
-            int edgeX = Math.Min(x, size - 1 - x);
-            int edgeY = Math.Min(y, size - 1 - y);
-            bool inside = edgeX >= 3 || edgeY >= 3 ||
-                          Math.Pow(3 - edgeX, 2) + Math.Pow(3 - edgeY, 2) <= 9;
-            if (!inside) continue;
-            bool rim = edgeX == 0 || edgeY == 0 ||
-                       (edgeX < 3 && edgeY < 3 &&
-                        Math.Pow(3 - edgeX, 2) + Math.Pow(3 - edgeY, 2) >= 4);
-            Pixel(x, y, rim ? (byte)0xF2 : (byte)0x1B,
-                        rim ? (byte)0xB3 : (byte)0x1D,
-                        rim ? (byte)0x3D : (byte)0x27);
-        }
-
-        string[] letterA = ["01110", "10001", "10001", "11111", "10001", "10001", "10001"];
-        string[] letterD = ["11110", "10001", "10001", "10001", "10001", "10001", "11110"];
-
-        void Letter(string[] rows, int left, byte red, byte green, byte blue)
-        {
-            for (int row = 0; row < rows.Length; row++)
-            for (int column = 0; column < rows[row].Length; column++)
-            {
-                if (rows[row][column] != '1') continue;
-                for (int dy = 0; dy < 2; dy++)
-                for (int dx = 0; dx < 2; dx++)
-                    Pixel(left + column * 2 + dx, 9 + row * 2 + dy, red, green, blue);
-            }
-        }
-
-        Letter(letterA, 5, 0xF2, 0xB3, 0x3D);
-        Letter(letterD, 17, 0xF4, 0xF4, 0xF6);
-
-        IntPtr handle = bitmap.GetHicon();
-        try
-        {
-            using var borrowed = Drawing.Icon.FromHandle(handle);
-            return (Drawing.Icon)borrowed.Clone();
-        }
-        finally { DestroyIcon(handle); }
+        var executable = Environment.ProcessPath;
+        return executable is not null
+            ? Drawing.Icon.ExtractAssociatedIcon(executable) ??
+              (Drawing.Icon)Drawing.SystemIcons.Application.Clone()
+            : (Drawing.Icon)Drawing.SystemIcons.Application.Clone();
     }
-
-    [DllImport("user32.dll")]
-    private static extern bool DestroyIcon(IntPtr handle);
 
     private static string? FindInstallPath(StudioSettings settings)
     {

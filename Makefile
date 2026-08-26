@@ -18,7 +18,7 @@ DIST    ?= dist
 
 .PHONY: dist prepare-dist native shell rewrite test clean installer
 
-dist: prepare-dist native shell
+dist: prepare-dist native shell rewrite
 	@echo "dist/ ready:"
 	@ls -1 $(DIST) | sed 's/^/  /'
 
@@ -62,6 +62,21 @@ rewrite: prepare-dist
 	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
 		-o $(DIST)/rewrites/ZOT32.AD rewrites/zot32.c rewrites/admkit.c \
 		$(DIST)/rewrite-build/zot32-res.o -lgdi32 -lm
+	$(WINDRES) $(DIST)/rewrite-build/warp32.rc \
+		-O coff -o $(DIST)/rewrite-build/warp32-res.o
+	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
+		-o $(DIST)/rewrites/WARP32.AD rewrites/warp32.c rewrites/admkit.c \
+		$(DIST)/rewrite-build/warp32-res.o -lgdi32 -lm
+	$(WINDRES) $(DIST)/rewrite-build/spheres32.rc \
+		-O coff -o $(DIST)/rewrite-build/spheres32-res.o
+	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
+		-o $(DIST)/rewrites/SPHERES32.AD rewrites/spheres32.c rewrites/admkit.c \
+		$(DIST)/rewrite-build/spheres32-res.o -lgdi32 -lm
+	$(WINDRES) $(DIST)/rewrite-build/stained32.rc \
+		-O coff -o $(DIST)/rewrite-build/stained32-res.o
+	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
+		-o $(DIST)/rewrites/STAINED32.AD rewrites/stained32.c rewrites/admkit.c \
+		$(DIST)/rewrite-build/stained32-res.o -lgdi32 -lm
 
 prepare-dist:
 	$(PYTHON) -c "from pathlib import Path; Path('$(DIST)').mkdir(parents=True, exist_ok=True)"

@@ -11,8 +11,10 @@
     <!-- 64-bit: the shell never loads a module, so nothing forces it to x86. -->
     <PlatformTarget>x64</PlatformTarget>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <Resource Include="app.ico" />
     <None Include="data/**" CopyToOutputDirectory="PreserveNewest" LinkBase="data" />
   </ItemGroup>
   <ItemGroup>

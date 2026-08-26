@@ -13,9 +13,10 @@ application, in which every module is properly configurable.
 The Studio UI and real disc catalogue have now been exercised on Windows 11.
 The installer is not code-signed, so SmartScreen will warn.
 
-It ships no screen savers. Setup imports them from your own After Dark 4 disc or
-installation — which also replaces AD4's own installer, that being 16-bit and
-unable to run on Windows 11 at all.
+It ships no Berkeley Systems screen savers. Setup imports them from your own
+After Dark 4 disc or installation — which also replaces AD4's own installer,
+that being 16-bit and unable to run on Windows 11 at all. Independent
+clean-room Classic rewrites built by this project are included separately.
 
 Companion media stays user-owned too. In particular, Setup imports Art Critic's
 `PICTURES` folder from the disc and Studio points the original 32-bit module at
@@ -86,11 +87,13 @@ them. See [docs/PACKAGING.md](docs/PACKAGING.md).
 Studio remains in the Windows notification area when its window is closed. The
 `AD` tray menu switches directly between runnable modules, reopens Studio, and
 links to the native Windows screensaver settings. Windows remains the sole
-owner of the idle timeout and sign-in-on-resume preferences.
+owner of the idle timeout and sign-in-on-resume preferences. The same
+multi-resolution `AD` monogram is embedded in the Studio executable and used
+by its window and notification-area icon.
 
 ```
 make dist        # build everything into dist/
-make rewrite     # build the independent MANDEL32.AD and SHAPES32.AD rewrites
+make rewrite     # build the independent Classic module rewrites
 make test        # ABI layout check + catalogue tests
 make installer   # Inno Setup 7 (Windows)
 ```

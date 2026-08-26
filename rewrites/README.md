@@ -33,17 +33,26 @@ The next procedural batch shares the small `admkit` pixel-canvas runtime:
 randomness, fading, and HDC presentation. Module lifecycle and behavior remain
 in each module source file.
 
+The second `admkit` batch adds three more asset-free modules:
+
+- `WARP32.AD` preserves Speed, Stars, Size, and Color while drawing an inward
+	or outward perspective star field.
+- `SPHERES32.AD` preserves Max Size, Offset, Clear Every, and Clear Screen
+	Frequently while accumulating highlighted circle outlines.
+- `STAINED32.AD` preserves Complexity, Duplication, and Color while drawing
+	animated, repeated stained-glass cells with black leading.
+
 Build it with:
 
 ```sh
 make rewrite
 ```
 
-The results are written below `dist/rewrites`: `MANDEL32.AD`, `SHAPES32.AD`,
-`SPIRAL32.AD`, `TUNNEL32.AD`, and `ZOT32.AD`. The build generates the
+The eight results are written below `dist/rewrites`. The build generates the
 documented control-definition resources, compiles them with `windres`, and
 links self-contained x86 DLLs. They do not need `ADXPL510.DLL` or the original
-16-bit modules.
+16-bit modules. `make dist` builds them, and future installer builds place them
+under `modules/rewrites` without bundling any original module or media.
 
 The rewrites validate the drop-in contract: catalogue discovery, control slots,
 module lifecycle, and drawing through the HDC in `AD_MODULE32`. Behavioral

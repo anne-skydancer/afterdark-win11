@@ -179,3 +179,67 @@ void adm_round_rectangle(ADM_CANVAS *canvas, int left, int top, int right,
         }
     }
 }
+
+void adm_ellipse(ADM_CANVAS *canvas, int center_x, int center_y,
+                 int radius_x, int radius_y, uint32_t color)
+{
+    int step;
+    int previous_x = center_x + radius_x;
+    int previous_y = center_y;
+    for (step = 1; step <= 96; step++) {
+        double angle = (double)step * 6.28318530717958647692 / 96.0;
+        int x = center_x + (int)(cos(angle) * radius_x);
+        int y = center_y + (int)(sin(angle) * radius_y);
+        adm_line(canvas, previous_x, previous_y, x, y, color);
+        previous_x = x;
+        previous_y = y;
+    }
+}
+
+static int edge_intersection(int x0, int y0, int x1, int y1, int y, int *x)
+{
+    int minimum = y0 < y1 ? y0 : y1;
+    int maximum = y0 > y1 ? y0 : y1;
+    if (y < minimum || y >= maximum || y0 == y1) return 0;
+    *x = x0 + (int)((int64_t)(x1 - x0) * (y - y0) / (y1 - y0));
+    return 1;
+}
+
+void adm_filled_triangle(ADM_CANVAS *canvas, int x0, int y0, int x1, int y1,
+                         int x2, int y2, uint32_t fill, uint32_t outline)
+{
+    int minimum_y = y0;
+    int maximum_y = y0;
+    int y;
+    if (y1 < minimum_y) minimum_y = y1;
+    if (y2 < minimum_y) minimum_y = y2;
+    if (y1 > maximum_y) maximum_y = y1;
+    if (y2 > maximum_y) maximum_y = y2;
+    if (minimum_y < 0) minimum_y = 0;
+    if (maximum_y >= canvas->height) maximum_y = canvas->height - 1;
+
+    for (y = minimum_y; y <= maximum_y; y++) {
+        int intersections[3];
+        int count = 0;
+        int left;
+        int right;
+        int x;
+        count += edge_intersection(x0, y0, x1, y1, y,
+                                   &intersections[count]);
+        count += edge_intersection(x1, y1, x2, y2, y,
+                                   &intersections[count]);
+        count += edge_intersection(x2, y2, x0, y0, y,
+                                   &intersections[count]);
+        if (count < 2) continue;
+        left = intersections[0] < intersections[1] ? intersections[0]
+                                                    : intersections[1];
+        right = intersections[0] > intersections[1] ? intersections[0]
+                                                     : intersections[1];
+        if (left < 0) left = 0;
+        if (right >= canvas->width) right = canvas->width - 1;
+        for (x = left; x <= right; x++) adm_put_pixel(canvas, x, y, fill);
+    }
+    adm_line(canvas, x0, y0, x1, y1, outline);
+    adm_line(canvas, x1, y1, x2, y2, outline);
+    adm_line(canvas, x2, y2, x0, y0, outline);
+}
