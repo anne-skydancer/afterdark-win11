@@ -80,10 +80,10 @@ typedef char ad_module32_size_check[
 /* ---- dwFlags: host -> module -------------------------------------------- */
 #define AD_FLAG_PALETTE     0x00000001u  /* display supports palettes
                                             (GetDeviceCaps RASTERCAPS/RC_PALETTE) */
-#define AD_FLAG_BIT1        0x00000002u  /* set by host; meaning unconfirmed  */
+#define AD_FLAG_SOUND       0x00000012u  /* original host sets bits 1 and 4
+                                            whenever MuteSound is false     */
 #define AD_FLAG_MODE_1      0x00000004u  /* bits 2/3 select the run mode the  */
 #define AD_FLAG_MODE_2      0x00000008u  /* module reads at entry             */
-#define AD_FLAG_BIT4        0x00000010u  /* set by host; meaning unconfirmed  */
 
 /* ---- messages: value of dwMessage ---------------------------------------
  * Valid range is 0..30; the module's dispatch table is bounded at 30.

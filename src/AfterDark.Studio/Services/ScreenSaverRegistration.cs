@@ -11,8 +11,10 @@ namespace AfterDark.Studio.Services;
 ///
 ///   * SCRNSAVE.EXE accepts a FULL PATH. The System32 copy only ever existed
 ///     so the classic dialog would list the file in its dropdown.
-///   * These are three values under HKEY_CURRENT_USER. No elevation, no
+///   * Saver selection uses two values under HKEY_CURRENT_USER. No elevation, no
 ///     writes to a system directory, no opaque .reg from the internet.
+///   * Timeout and secure resume remain owned by Windows and are never changed
+///     while switching After Dark modules.
 ///
 /// HKCU\Control Panel\Desktop is not subject to WOW64 registry redirection,
 /// so a 64-bit process writes exactly the same keys a 32-bit one would.
@@ -35,30 +37,36 @@ public static class ScreenSaverRegistration
     public static State Read()
     {
         using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(DesktopKey);
-        if (key is null) return new State(null, false, 0, false);
+
+        uint active = 0, timeout = 0, secure = 0;
+        bool hasActive = SystemParametersInfoGet(SPI_GETSCREENSAVEACTIVE, 0, out active, 0);
+        bool hasTimeout = SystemParametersInfoGet(SPI_GETSCREENSAVETIMEOUT, 0, out timeout, 0);
+        bool hasSecure = SystemParametersInfoGet(SPI_GETSCREENSAVESECURE, 0, out secure, 0);
+
         return new State(
-            key.GetValue("SCRNSAVE.EXE") as string,
-            (key.GetValue("ScreenSaveActive") as string) == "1",
-            int.TryParse(key.GetValue("ScreenSaveTimeOut") as string, out var t) ? t : 0,
-            (key.GetValue("ScreenSaverIsSecure") as string) == "1");
+            key?.GetValue("SCRNSAVE.EXE") as string,
+            hasActive ? active != 0 : (key?.GetValue("ScreenSaveActive") as string) == "1",
+            hasTimeout ? (int)timeout
+                : int.TryParse(key?.GetValue("ScreenSaveTimeOut") as string, out var registryTimeout)
+                    ? registryTimeout : 0,
+            hasSecure ? secure != 0 : (key?.GetValue("ScreenSaverIsSecure") as string) == "1");
     }
 
-    /// <summary>Point Windows at <paramref name="scrPath"/> and apply it live.</summary>
-    public static void Install(string scrPath, int timeoutSeconds, bool secureResume)
+    /// <summary>
+    /// Point Windows at <paramref name="scrPath"/> without changing the user's
+    /// system-owned timeout or secure-resume preferences.
+    /// </summary>
+    public static void Install(string scrPath)
     {
         if (!File.Exists(scrPath))
             throw new FileNotFoundException("screensaver not found", scrPath);
-        if (timeoutSeconds < 60) timeoutSeconds = 60;
 
         using var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(DesktopKey)
             ?? throw new InvalidOperationException("could not open HKCU Control Panel\\Desktop");
 
         key.SetValue("SCRNSAVE.EXE", Path.GetFullPath(scrPath));
         key.SetValue("ScreenSaveActive", "1");
-        key.SetValue("ScreenSaveTimeOut", timeoutSeconds.ToString());
-        key.SetValue("ScreenSaverIsSecure", secureResume ? "1" : "0");
-
-        Apply(timeoutSeconds, secureResume);
+        SystemParametersInfo(SPI_SETSCREENSAVEACTIVE, 1, IntPtr.Zero, SPIF_SENDCHANGE);
     }
 
     public static void Disable()
@@ -68,23 +76,17 @@ public static class ScreenSaverRegistration
         SystemParametersInfo(SPI_SETSCREENSAVEACTIVE, 0, IntPtr.Zero, SPIF_SENDCHANGE);
     }
 
-    /// <summary>
-    /// Push the values into the running session. Without this the registry is
-    /// right but the current session keeps the old timeout until sign-out.
-    /// </summary>
-    private static void Apply(int timeoutSeconds, bool secureResume)
-    {
-        SystemParametersInfo(SPI_SETSCREENSAVEACTIVE, 1, IntPtr.Zero, SPIF_SENDCHANGE);
-        SystemParametersInfo(SPI_SETSCREENSAVETIMEOUT, (uint)timeoutSeconds, IntPtr.Zero, SPIF_SENDCHANGE);
-        SystemParametersInfo(SPI_SETSCREENSAVESECURE, secureResume ? 1u : 0u, IntPtr.Zero, SPIF_SENDCHANGE);
-    }
-
     private const uint SPI_SETSCREENSAVEACTIVE  = 0x0011;
-    private const uint SPI_SETSCREENSAVETIMEOUT = 0x000F;
-    private const uint SPI_SETSCREENSAVESECURE  = 0x0077;
+    private const uint SPI_GETSCREENSAVEACTIVE  = 0x0010;
+    private const uint SPI_GETSCREENSAVETIMEOUT = 0x000E;
+    private const uint SPI_GETSCREENSAVESECURE  = 0x0076;
     private const uint SPIF_SENDCHANGE          = 0x0002;
 
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SystemParametersInfo(uint action, uint param, IntPtr pv, uint winIni);
+
+    [DllImport("user32.dll", EntryPoint = "SystemParametersInfoW", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SystemParametersInfoGet(uint action, uint param, out uint value, uint winIni);
 }

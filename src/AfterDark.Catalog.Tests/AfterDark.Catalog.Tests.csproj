@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AfterDark.Catalog\AfterDark.Catalog.csproj" />
+    <ProjectReference Include="..\AfterDark.Studio\AfterDark.Studio.csproj" />
   </ItemGroup>
 
 </Project>

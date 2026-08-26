@@ -79,7 +79,7 @@ version field. A host should set it exactly.
 | Offset | Type | Meaning | Status |
 |---|---|---|---|
 | `+0x000` | DWORD | `cbSize` — always `0x15C` | **confirmed** (`0x402131`) |
-| `+0x004` | DWORD | Input flags. bit0 = display supports palettes; bit1, bit4 also set by host; **bit2/bit3 select the run mode** the module reads | **confirmed** (`0x402163`–`0x402190`, read at `0x41e509`) |
+| `+0x004` | DWORD | Input flags. bit0 = display supports palettes; **bits 1 and 4 enable sound when `MuteSound` is false**; bit2/bit3 select the run mode the module reads | **confirmed** (`0x402163`–`0x402190`, sound gate at engine `0x42003b`) |
 | `+0x008` | DWORD | Output flags, module → host. Host re-reads after every call and splits bits 0/1/2 into its own state | **confirmed** (`0x402415`–`0x402437`) |
 | `+0x010` | HWND | Target window | **confirmed** — passed as arg 1 to `GetClientRect` at `0x402141` |
 | `+0x014` | HINSTANCE | `HMODULE` of the loaded `.AD` | **confirmed** (`0x40235b`, from `LoadLibrary`) |
@@ -195,6 +195,12 @@ module on other non-zero values.
    the client rect, and `iControlValue[0..3]` from the extracted schema.
 5. Drive the lifecycle above, **with your own frame clock**, honouring a
    return of 3 as restart.
+6. Set input flag bits `0x02 | 0x10` when sound is enabled. The engine checks
+   both before initializing its sound path.
+7. Recreate the original profile values `[Berkeley Systems] AD Data Files` and
+   `AD Ini Files` before loading the engine. `GetADDir` reads them through
+   `GetProfileStringA`; without them, relative MIDI paths resolve below
+   `C:\Windows`.
 
 The C declarations are in [`include/ad_module32.h`](../include/ad_module32.h).
 
@@ -207,8 +213,9 @@ the calling convention, the argument count, the block size and its `cbSize`
 field, the control array, the message and parameter offsets, the full message
 numbering, the lifecycle order, and the restart return code.
 
-Inferred, and worth verifying at runtime: the meaning of the `+0x004` mode
-bits, which rect is which, and the length of the `+0x050` string buffer.
+Inferred, and worth verifying at runtime: which rect is which, and the length
+of the `+0x050` string buffer. The run-mode and sound bits at `+0x004` are now
+confirmed.
 
 `+0x018` was the field most likely to hide a dependency on host state, and it
 turned out to be the most mundane thing possible: a GDI device context. The

@@ -1,5 +1,119 @@
 # Changelog
 
+## 0.1.5 — original module sound
+
+### Fixed
+
+- The recovered host now sets `AD_MODULE32` sound bits `0x02 | 0x10`, matching
+  the original host whenever `MuteSound` was false. ADXPL510 checks both bits
+  before enabling its sound path.
+- The host initializes the original `[Berkeley Systems]` profile folder values
+  before loading the engine, so relative media paths resolve below the imported
+  module directory instead of `C:\Windows`.
+- Setup and in-app import preserve all five external AD4 MIDI tracks, including
+  the long `Baby Toasters.mid` and `Flying Toasters.mid` names embedded by
+  Flying Toasters.
+
+### Verified
+
+- Real Deluxe media import produced 84 modules, 11 Art Critic pictures, and all
+  five expected music tracks.
+- Flying Toasters with Music set to Always produced 79 MIDI file events,
+  including 74 successful operations and 52 reads of the imported track, with
+  zero requests under `C:\Windows\Music`.
+
+## 0.1.4 — screensaver crash recovery
+
+### Fixed
+
+- A module crash in Windows preview or full-screen mode no longer produces a
+  blank Windows Error Reporting dialog. The isolated x86 host and x64 `.scr`
+  suppress child crash UI and report failure through process exit.
+- The `.scr` retries once with Flying Toasters, then Starry Night when
+  available, so one incompatible module cannot leave the preview or lock
+  screen blank.
+- Portable/staged `.scr` copies prefer sibling host binaries, while a System32
+  copy continues to resolve the Program Files installation through HKLM.
+- Hosted modules now receive a hidden HWND matching their 640x480 render
+  surface rather than the differently sized preview/full-screen presentation
+  target.
+
+### Verified
+
+- Bad Dog reproducibly faults during `PREINITIALIZE` with access violation
+  `0xC0000005` in hosted mode. Under the fixed `.scr`, Windows preview remains
+  alive, switches to Flying Toasters, renders a 76-color sampled surface, and
+  shows no WER dialog.
+- Flying Toasters still renders nonblank frames through the rebuilt x86 host,
+  and the `/c` configuration contract continues to launch Studio.
+
+## 0.1.3 — Art Critic companion media
+
+### Added
+
+- **Art Critic picture import.** Setup and in-app import copy BMP, GIF, JPG, and
+  JPEG files from the owned disc's `AD40\PICTURES` folder into
+  `modules\PICTURES`.
+- **Legacy preference bridge.** Studio seeds Art Critic's discovered
+  `[ArtCritic d29] / Art Path` compatibility setting through Windows' INI API,
+  while preserving any valid custom folder already selected by the user.
+
+### Clarified
+
+- Art Critic itself is already a hostable 32-bit PE module using the recovered
+  `AD_MODULE32` ABI. It remains unmodified; only its external user-owned media
+  and preference path need restoration.
+- Native ABI rewrites remain the recommended path for the 61 Classic NE
+  modules, with Mandelbrot as the first procedural pilot.
+
+## 0.1.2 — tray controls and Windows-owned timeout
+
+### Added
+
+- **Tray module switcher.** Closing Studio keeps it in the Windows notification
+  area. Its native menu lists every runnable module for one-click activation,
+  opens the full Studio, links to Windows screensaver settings, and provides an
+  explicit Exit command.
+- **AD monogram tray icon.** A small, high-contrast amber-and-white monogram is
+  generated at runtime for clear rendering on light and dark taskbars.
+- **Measured Classic rewrite plan.** All 61 NE modules, supporting binaries,
+  controls, and representative resources were assessed. Mandelbrot replaces
+  Confetti as the first native rewrite pilot.
+
+### Changed
+
+- Screensaver timeout and secure resume are now exclusively owned by Windows.
+  Selecting a module changes only the active `.scr`; Studio no longer stores or
+  writes duplicate timing/security preferences.
+- Restoring Studio from the tray restarts its live preview, and importing media
+  refreshes the tray module list without restarting the app.
+
+## 0.1.1 — Windows integration and media import
+
+### Added
+
+- **In-app media import.** Studio can import modules from an owned After Dark
+  disc or existing installation into the current user's local data directory.
+  AD4 and Classic modules remain separated to preserve duplicate filenames.
+- **First-run empty state.** A clear import action replaces the blank window
+  shown when Setup did not import modules.
+
+### Changed
+
+- Studio follows the Windows app theme and system accent color instead of
+  forcing a custom dark palette.
+- Screensaver timeout and secure-resume controls initialize from the live
+  Windows session settings.
+- Normal application startup now loads persisted settings and the imported
+  module catalogue before displaying the main window.
+
+### Verified
+
+- The Studio UI and mounted-disc catalogue were exercised natively on Windows
+  11 with both Windows personalization and the real 84-module disc layout.
+- Media import has automated coverage for AD4/Classic separation, source
+  immutability, and invalid source handling.
+
 ## 0.1.0 — first release
 
 A modern Windows 11 front end for After Dark 4, replacing the

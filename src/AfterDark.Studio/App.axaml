@@ -1,18 +1,11 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="AfterDark.Studio.App"
-             RequestedThemeVariant="Dark">
+             RequestedThemeVariant="Default">
   <Application.Styles>
     <FluentTheme />
   </Application.Styles>
   <Application.Resources>
-    <SolidColorBrush x:Key="Bg"       Color="#12131A" />
-    <SolidColorBrush x:Key="Panel"    Color="#1B1D27" />
-    <SolidColorBrush x:Key="PanelAlt" Color="#232634" />
-    <SolidColorBrush x:Key="Line"     Color="#31364A" />
-    <SolidColorBrush x:Key="Ink"      Color="#EDEFF7" />
-    <SolidColorBrush x:Key="Muted"    Color="#9AA1BC" />
-    <SolidColorBrush x:Key="Accent"   Color="#F2B33D" />
     <SolidColorBrush x:Key="Ok"       Color="#5BC98B" />
     <SolidColorBrush x:Key="Warn"     Color="#E4744F" />
   </Application.Resources>

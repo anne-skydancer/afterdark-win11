@@ -1,11 +1,14 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using AfterDark.Catalog;
 using AfterDark.Studio.Services;
 using AfterDark.Studio.ViewModels;
 
@@ -23,12 +26,16 @@ public partial class MainWindow : Window
     // the module, and a slider dragged across ten stops must not start ten hosts.
     private DispatcherTimer? _restart;
     private MainViewModel? _vm;
+    public bool HideInsteadOfClose { get; set; }
 
     public MainWindow()
     {
         AvaloniaXamlLoader.Load(this);
 
         if (this.FindControl<Button>("SetSaver") is { } b) b.Click += OnSetScreenSaver;
+        if (this.FindControl<Button>("OpenScreenSaverSettings") is { } settings)
+            settings.Click += OnOpenScreenSaverSettings;
+        if (this.FindControl<Button>("ImportModules") is { } import) import.Click += OnImportModules;
         _image       = this.FindControl<Image>("PreviewImage");
         _message     = this.FindControl<StackPanel>("PreviewMessage");
         _messageText = this.FindControl<TextBlock>("PreviewMessageText");
@@ -137,6 +144,70 @@ public partial class MainWindow : Window
     {
         // Paths come from Setup's HKLM record, not from wherever a binary sits.
         if (DataContext is MainViewModel vm) vm.SetAsScreenSaver();
+    }
+
+    private void OnOpenScreenSaverSettings(object? sender, RoutedEventArgs e)
+        => OpenWindowsScreenSaverSettings(DataContext as MainViewModel);
+
+    public static void OpenWindowsScreenSaverSettings(MainViewModel? viewModel)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        try
+        {
+            Process.Start(new ProcessStartInfo("control.exe", "desk.cpl,,@screensaver")
+            {
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            viewModel?.ReportError($"Could not open Windows screensaver settings: {ex.Message}");
+        }
+    }
+
+    protected override void OnClosing(WindowClosingEventArgs e)
+    {
+        if (HideInsteadOfClose)
+        {
+            e.Cancel = true;
+            Hide();
+            _preview.Stop();
+            _restart?.Stop();
+        }
+        base.OnClosing(e);
+    }
+
+    private async void OnImportModules(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm || sender is not Button button) return;
+
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Choose your After Dark disc or installation",
+            AllowMultiple = false,
+        });
+        if (folders.Count == 0) return;
+
+        button.IsEnabled = false;
+        try
+        {
+            var result = await Task.Run(() => ModuleImporter.Import(folders[0].Path.LocalPath));
+            if (OperatingSystem.IsWindows())
+                LegacyModulePreferences.EnsureArtCriticPath(result.Destination);
+            var modules = await Task.Run(() => ModuleCatalog.Scan(result.Destination));
+            LabelOverrides.Load(Path.Combine(AppContext.BaseDirectory, "data", "labels.json"))
+                          .Apply(modules);
+            vm.SetImportedModules(result.Destination, modules,
+                                  result.ModuleCount, result.PictureCount, result.MusicCount);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            vm.ReportError($"Could not import modules: {ex.Message}");
+        }
+        finally
+        {
+            button.IsEnabled = true;
+        }
     }
 
     protected override void OnClosed(EventArgs e)

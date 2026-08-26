@@ -50,6 +50,7 @@ typedef struct {
 static Config      g_cfg;
 static HWND        g_windows[AD_MAX_MONITORS];
 static HANDLE      g_children[AD_MAX_MONITORS];
+static int         g_fallback_used[AD_MAX_MONITORS];
 static int         g_count;
 static volatile int g_quit;
 static POINT       g_origin;
@@ -163,11 +164,18 @@ static int install_dir(char *out, size_t n)
     return 1;
 }
 
-/* A file that ships with the program: prefer the recorded install directory,
- * fall back to sitting beside us (a portable, unpacked copy). */
+/* A file that ships with the program: use a valid sibling for a portable or
+ * staged copy. The System32 copy has no siblings, so it falls through to the
+ * install directory recorded by Setup. */
 static void install_file(const char *leaf, char *out, size_t n)
 {
     char dir[MAX_PATH], candidate[MAX_PATH];
+
+    beside_me(leaf, candidate, sizeof(candidate));
+    if (GetFileAttributesA(candidate) != INVALID_FILE_ATTRIBUTES) {
+        lstrcpynA(out, candidate, (int)n);
+        return;
+    }
 
     if (install_dir(dir, sizeof(dir))) {
         size_t len = strlen(dir);
@@ -183,7 +191,7 @@ static void install_file(const char *leaf, char *out, size_t n)
 
 /* ------------------------------------------------------------------- child */
 
-static HANDLE spawn_host(HWND parent)
+static HANDLE spawn_host_for(HWND parent, const char *module, const char *controls)
 {
     char exe[MAX_PATH], cmd[2048];
     STARTUPINFOA si;
@@ -194,10 +202,10 @@ static HANDLE spawn_host(HWND parent)
     _snprintf(cmd, sizeof(cmd),
               "\"%s\" \"%s\" \"%s\" --parent %llu --fps %d --scale %s "
               "--bpp %d --size %dx%d --controls %s --quiet",
-              exe, g_cfg.install, g_cfg.module,
+              exe, g_cfg.install, module,
               (unsigned long long)(ULONG_PTR)parent,
               g_cfg.fps, g_cfg.scale, g_cfg.bpp,
-              g_cfg.width, g_cfg.height, g_cfg.controls);
+              g_cfg.width, g_cfg.height, controls);
 
     ZeroMemory(&si, sizeof(si));
     si.cb = sizeof(si);
@@ -211,6 +219,26 @@ static HANDLE spawn_host(HWND parent)
 
     CloseHandle(pi.hThread);
     return pi.hProcess;
+}
+
+static HANDLE spawn_host(HWND parent)
+{
+    return spawn_host_for(parent, g_cfg.module, g_cfg.controls);
+}
+
+static HANDLE spawn_fallback(HWND parent)
+{
+    static const char *safe[] = { "TOASTERS.AD", "STARRYNI.AD" };
+    char candidate[MAX_PATH];
+    int i;
+
+    for (i = 0; i < (int)(sizeof(safe) / sizeof(safe[0])); i++) {
+        _snprintf(candidate, sizeof(candidate), "%s\\%s", g_cfg.install, safe[i]);
+        if (!_stricmp(candidate, g_cfg.module)) continue;
+        if (GetFileAttributesA(candidate) == INVALID_FILE_ATTRIBUTES) continue;
+        return spawn_host_for(parent, candidate, "0,0,0,0");
+    }
+    return NULL;
 }
 
 static void stop_children(void)
@@ -277,6 +305,7 @@ static BOOL CALLBACK on_monitor(HMONITOR mon, HDC dc, LPRECT rc, LPARAM p)
 
     g_windows[g_count] = w;
     g_children[g_count] = spawn_host(w);
+    g_fallback_used[g_count] = 0;
     g_count++;
     return TRUE;
 }
@@ -306,9 +335,21 @@ static int pump_until_quit(void)
         /* If every renderer has died there is nothing left to show. */
         {
             int i, alive = 0;
-            for (i = 0; i < g_count; i++)
-                if (g_children[i] &&
-                    WaitForSingleObject(g_children[i], 0) == WAIT_TIMEOUT) alive++;
+            for (i = 0; i < g_count; i++) {
+                if (!g_children[i]) continue;
+                if (WaitForSingleObject(g_children[i], 0) == WAIT_TIMEOUT) {
+                    alive++;
+                    continue;
+                }
+
+                CloseHandle(g_children[i]);
+                g_children[i] = NULL;
+                if (!g_fallback_used[i]) {
+                    g_fallback_used[i] = 1;
+                    g_children[i] = spawn_fallback(g_windows[i]);
+                    if (g_children[i]) alive++;
+                }
+            }
             if (g_count > 0 && alive == 0) break;
         }
         Sleep(30);
@@ -336,6 +377,7 @@ static int run_fullscreen(void)
 static int run_preview(HWND parent)
 {
     HANDLE child;
+    int fallback_used = 0;
     if (!IsWindow(parent)) return 1;
     if (!config_load(&g_cfg)) return 1;
 
@@ -344,10 +386,19 @@ static int run_preview(HWND parent)
 
     /* Live only as long as the settings dialog keeps the preview window. */
     while (IsWindow(parent)) {
-        if (WaitForSingleObject(child, 120) == WAIT_OBJECT_0) break;
+        if (WaitForSingleObject(child, 120) != WAIT_OBJECT_0) continue;
+
+        CloseHandle(child);
+        child = NULL;
+        if (fallback_used) break;
+        fallback_used = 1;
+        child = spawn_fallback(parent);
+        if (!child) break;
     }
-    if (WaitForSingleObject(child, 0) == WAIT_TIMEOUT) TerminateProcess(child, 0);
-    CloseHandle(child);
+    if (child) {
+        if (WaitForSingleObject(child, 0) == WAIT_TIMEOUT) TerminateProcess(child, 0);
+        CloseHandle(child);
+    }
     return 0;
 }
 
@@ -372,6 +423,10 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmd, int show)
 {
     const char *p = cmd;
     (void)inst; (void)prev; (void)show;
+
+    /* The renderer is deliberately isolated. A 1990s module fault must never
+     * surface Windows Error Reporting UI over the lock screen or control panel. */
+    SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
 
     while (*p == ' ' || *p == '\t') p++;
 
