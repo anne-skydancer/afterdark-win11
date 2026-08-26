@@ -227,17 +227,33 @@ Each stage ships something usable on its own.
 6. **Classic coverage** — OTVDM experiment and/or native rewrites
    (see [REWRITES.md](REWRITES.md)).
 
-### The one unknown that gates stage 2
+### The gate on stage 2 is now open
 
-`AD_MODULE32`'s exact field layout is not documented. The 16-bit `AD_MODULE`
-layout **is** public (in the AD 3.0 SDK), and the engine exports
-`PortableModule::SetUpModuleIdentity(void*, AD_MODULE32*)`, which confirms both
-the name and the lineage. Recovering the layout means disassembling
-`AFTERDAR.SCR` around its call into a module's `Module` export and comparing
-against the known 16-bit struct. Budget a day; treat a second day as the signal
-to reconsider.
+`AD_MODULE32`'s layout was the one undocumented thing standing between this
+plan and a working host. It has been recovered — see **[ABI.md](ABI.md)** for
+the full evidence, and [`include/ad_module32.h`](../include/ad_module32.h) for
+declarations you can build against.
 
----
+The three things that change this design:
+
+1. **The entry point takes one argument, not three.**
+   `int __stdcall Module(AD_MODULE32*)`, resolved as `_Module@4` with an
+   undecorated `Module` fallback. The AD3 signature does not apply.
+2. **The messages were renumbered.** AD4 uses `BLANK=3`, `DRAWFRAME=4`,
+   `CLOSE=5`; AD3 used `BLANK=1`, `CLOSE=3`. A host written to the published
+   AD3 constants sends the wrong messages — and would look like a module bug.
+3. **Control values live at block offset 0x40**, as `int[4]`, exactly matching
+   the slot indices the extractor already emits. §3.2's value flow is confirmed
+   end to end.
+
+The original host's frame loop is a `GetTickCount`-bounded spin that sends
+`DRAWFRAME` as fast as it can. That confirms §5's pacing problem from the
+binary rather than from inference: a modern host must supply its own clock.
+
+What stage 2 still has to prove is not "can a module be called" but "does the
+engine need state only `AFTERDAR.SCR` establishes". Block offset `+0x18`, a
+host context handle that every module reads before anything else, is where
+that would surface — and it fails loudly, not subtly.
 
 ## 8. Ground rules
 

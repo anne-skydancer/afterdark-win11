@@ -6,13 +6,15 @@ application, in which every module is properly configurable.
 
 ## Where this stands
 
-Feasibility is settled and the configuration layer is built. What remains is
-the Windows app itself.
+Feasibility is settled, the configuration layer is built, and the module ABI
+has been recovered by disassembly — the one unknown that gated a native host.
+What remains is the Windows app itself.
 
 | Document | What it covers |
 |---|---|
 | [docs/FEASIBILITY.md](docs/FEASIBILITY.md) | Verdict and evidence: module ABI, engine dependency, what Windows 11 can and cannot load |
 | [docs/DESIGN.md](docs/DESIGN.md) | The application: architecture, per-module configuration, screensaver registration without registry hacks |
+| [docs/ABI.md](docs/ABI.md) | The AD4 module ABI, recovered by disassembly: entry point, 348-byte parameter block, message numbering, lifecycle |
 | [docs/REWRITES.md](docs/REWRITES.md) | The 61 16-bit Classic modules, and how to bring them forward as 32-bit rewrites |
 
 **The short version.** After Dark 4's own (`AD40`) modules are 32-bit PE DLLs
@@ -65,6 +67,25 @@ Boris  (BORIS.AD, 16-bit)
 
 The JSON is the direct input to the configuration UI: control type, labels,
 defaults, and the slot index each value belongs in.
+
+## Building a host
+
+[`include/ad_module32.h`](include/ad_module32.h) declares the recovered ABI:
+
+```c
+int __stdcall Module(AD_MODULE32 *params);   /* "_Module@4", else "Module" */
+```
+
+A 348-byte parameter block carries the message at `+0x154` and the four control
+values at `+0x40`. Note AD4 **renumbered** the messages from After Dark 3
+(`BLANK=3`, `DRAWFRAME=4`, `CLOSE=5`) — building to the published AD3 constants
+will send the wrong ones. [docs/ABI.md](docs/ABI.md) has the evidence.
+
+```
+cc -o abitest tests/test_ad_module32_layout.c && ./abitest
+```
+
+verifies the header still matches the disassembled offsets.
 
 `tools/adlib.py` is the shared reader — PE and NE images, resources, and the
 After Dark control-definition format.
