@@ -4,6 +4,20 @@ A modern UI for **After Dark 4** screensavers on Windows 11 — replacing the
 copy-`.scr`-to-`System32` and import-a-registry-blob ritual with an actual
 application, in which every module is properly configurable.
 
+## Download
+
+**[AfterDarkStudio-0.1.0-setup.exe](releases/AfterDarkStudio-0.1.0-setup.exe)** —
+64-bit, system-wide, self-contained (32.2 MB). Checksum and full notes in
+[releases/](releases/README.md).
+
+Two things to know before you run it: **it has never been run on Windows 11**
+(everything was verified through Wine on Linux against the real modules, engine
+and Inno compiler), and **it is not code-signed**, so SmartScreen will warn.
+
+It ships no screen savers. Setup imports them from your own After Dark 4 disc or
+installation — which also replaces AD4's own installer, that being 16-bit and
+unable to run on Windows 11 at all.
+
 ## Where this stands
 
 Feasibility is settled, the module ABI has been recovered by disassembly, a
