@@ -1,0 +1,7 @@
+{
+  "_comment": "szTitle is a fixed 14-byte field, so long control labels are truncated in the module binary itself. These restore the full names. Presentation only - never changes a stored value. Key: <MODULE.AD>/<slot>.",
+  "TOASTERS.AD/3": "Display Karaoke",
+  "BADDOG.AD/0":   "Clear Screen First",
+  "BORIS.AD/0":    "Number of Cats",
+  "MESSAGES.AD/0": "Message Speed"
+}

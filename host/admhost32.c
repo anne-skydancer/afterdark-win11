@@ -125,6 +125,65 @@ static int surface_variety(const void *bits, size_t len)
     return n;
 }
 
+/* ---------------------------------------------------------------- present */
+
+static volatile int g_quit;
+static int  g_mouse_armed;
+static POINT g_last_mouse;
+
+static LRESULT CALLBACK present_proc(HWND w, UINT m, WPARAM wp, LPARAM lp)
+{
+    switch (m) {
+    case WM_KEYDOWN: case WM_SYSKEYDOWN: case WM_LBUTTONDOWN:
+    case WM_RBUTTONDOWN: case WM_MBUTTONDOWN:
+        g_quit = 1;
+        return 0;
+    case WM_MOUSEMOVE: {
+        /* Windows delivers spurious moves; only a real displacement counts. */
+        POINT p; GetCursorPos(&p);
+        if (!g_mouse_armed) { g_last_mouse = p; g_mouse_armed = 1; return 0; }
+        if (abs(p.x - g_last_mouse.x) > 4 || abs(p.y - g_last_mouse.y) > 4) g_quit = 1;
+        return 0;
+    }
+    case WM_CLOSE: case WM_DESTROY:
+        g_quit = 1;
+        return 0;
+    }
+    return DefWindowProcA(w, m, wp, lp);
+}
+
+/* Integer-scale where it fits, letterboxed and centred; the pixel art is the
+ * point, so a smooth stretch would be the wrong default. */
+static void present_blit(HDC dst, int dw, int dh, HDC src, int sw, int sh, int integer_scale)
+{
+    int scale = 1, tw, th, ox, oy;
+    RECT full;
+
+    if (integer_scale) {
+        int sx = dw / sw, sy = dh / sh;
+        scale = sx < sy ? sx : sy;
+        if (scale < 1) scale = 1;
+        tw = sw * scale; th = sh * scale;
+    } else {
+        double ar = (double)sw / (double)sh;
+        tw = dw; th = (int)(dw / ar);
+        if (th > dh) { th = dh; tw = (int)(dh * ar); }
+    }
+    ox = (dw - tw) / 2; oy = (dh - th) / 2;
+
+    if (ox > 0 || oy > 0) {
+        HBRUSH black = (HBRUSH)GetStockObject(BLACK_BRUSH);
+        full.left = 0; full.top = 0; full.right = dw; full.bottom = dh;
+        FillRect(dst, &full, black);
+    }
+    if (tw == sw && th == sh)
+        BitBlt(dst, ox, oy, tw, th, src, 0, 0, SRCCOPY);
+    else {
+        SetStretchBltMode(dst, integer_scale ? COLORONCOLOR : HALFTONE);
+        StretchBlt(dst, ox, oy, tw, th, src, 0, 0, sw, sh, SRCCOPY);
+    }
+}
+
 /* ---------------------------------------------------------------- palette */
 
 static char g_pal_name[64];
@@ -242,6 +301,10 @@ static void usage(void)
 "  --controls a,b,c,d   iControlValue[0..3] (default 0,0,0,0)\n"
 "  --bmp FILE      write the final surface (default admhost32.bmp)\n"
 "  --fps N         frame pacing; 0 = unpaced like the original (default 30)\n"
+"  --present       show a window and run until input (screensaver mode)\n"
+"  --parent HWND   render inside an existing window (the .scr's preview or\n"
+"                  full-screen surface); implies --present\n"
+"  --scale MODE    integer (default) or stretch\n"
 "  --quiet\n");
 }
 
@@ -250,6 +313,8 @@ int main(int argc, char **argv)
     char install[MAX_PATH], modpath[MAX_PATH], engine[MAX_PATH];
     const char *bmp = "admhost32.bmp";
     int  frames = 60, w = 640, h = 480, bpp = 8, fps = 30;
+    int  present = 0, integer_scale = 1;
+    HWND parent = NULL;
     int  ctl[4] = {0,0,0,0};
     int  i, r, restarts = 0;
     HMODULE hEngine, hMod;
@@ -274,6 +339,11 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--size") && i+1 < argc) sscanf(argv[++i], "%dx%d", &w, &h);
         else if (!strcmp(argv[i], "--controls") && i+1 < argc)
             sscanf(argv[++i], "%d,%d,%d,%d", &ctl[0], &ctl[1], &ctl[2], &ctl[3]);
+        else if (!strcmp(argv[i], "--present")) present = 1;
+        else if (!strcmp(argv[i], "--parent") && i+1 < argc)
+            { parent = (HWND)(ULONG_PTR)strtoul(argv[++i], NULL, 0); present = 1; }
+        else if (!strcmp(argv[i], "--scale") && i+1 < argc)
+            integer_scale = strcmp(argv[++i], "stretch") != 0;
         else if (!strcmp(argv[i], "--quiet")) g_verbose = 0;
         else { printf("unknown option: %s\n", argv[i]); usage(); return 2; }
     }
@@ -365,11 +435,43 @@ int main(int argc, char **argv)
     ok("surface ready, %lu bytes, bits at 0x%08lX",
        (unsigned long)imgbytes, (unsigned long)(ULONG_PTR)bits);
 
-    /* -- 5. a real window; some modules ask the HWND about its geometry -- */
-    step("create hidden window");
-    wnd = CreateWindowExA(0, "STATIC", "admhost32", WS_POPUP,
-                          0, 0, w, h, NULL, NULL, GetModuleHandle(NULL), NULL);
-    if (!wnd) fail("CreateWindow (continuing with NULL hWnd)");
+    /* -- 5. the window. In present mode this is what the user sees; otherwise
+     *       a hidden one, because modules may ask the HWND about geometry. -- */
+    if (present) {
+        WNDCLASSA wc;
+        RECT pr;
+        ZeroMemory(&wc, sizeof(wc));
+        wc.lpfnWndProc   = present_proc;
+        wc.hInstance     = GetModuleHandle(NULL);
+        wc.hCursor       = NULL;
+        wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
+        wc.lpszClassName = "admhost32_present";
+        RegisterClassA(&wc);
+
+        if (parent && IsWindow(parent)) {
+            step("create child window inside the supplied parent");
+            GetClientRect(parent, &pr);
+            wnd = CreateWindowExA(0, "admhost32_present", NULL,
+                                  WS_CHILD | WS_VISIBLE,
+                                  0, 0, pr.right, pr.bottom,
+                                  parent, NULL, GetModuleHandle(NULL), NULL);
+        } else {
+            step("create full-screen window");
+            wnd = CreateWindowExA(WS_EX_TOPMOST, "admhost32_present", "After Dark",
+                                  WS_POPUP | WS_VISIBLE,
+                                  0, 0, GetSystemMetrics(SM_CXSCREEN),
+                                  GetSystemMetrics(SM_CYSCREEN),
+                                  NULL, NULL, GetModuleHandle(NULL), NULL);
+            if (wnd) ShowCursor(FALSE);
+        }
+        if (!wnd) { fail("could not create the presentation window"); return 1; }
+        SetFocus(wnd);
+    } else {
+        step("create hidden window");
+        wnd = CreateWindowExA(0, "STATIC", "admhost32", WS_POPUP,
+                              0, 0, w, h, NULL, NULL, GetModuleHandle(NULL), NULL);
+        if (!wnd) fail("CreateWindow (continuing with NULL hWnd)");
+    }
 
     /* -- 6. fill the block -- */
     step("populate AD_MODULE32");
@@ -408,6 +510,48 @@ restart:
     if (send_msg(AD_MSG_PREINITIALIZE, 0) != AD_OK)
         printf("  (PREINITIALIZE non-zero)\n");
     send_msg(AD_MSG_BLANK, 0);
+
+    if (present) {
+        /* Run until the user does something. This is the screensaver loop:
+         * the module never learns about pacing -- that is entirely ours. */
+        DWORD period = (fps > 0) ? (DWORD)(1000 / fps) : 0;
+        HDC   wdc = GetDC(wnd);
+        RECT  rc;
+        MSG   msg;
+
+        g_verbose = 0;
+        while (!g_quit) {
+            DWORD t0 = GetTickCount();
+
+            while (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE)) {
+                if (msg.message == WM_QUIT) { g_quit = 1; break; }
+                TranslateMessage(&msg);
+                DispatchMessageA(&msg);
+            }
+            if (g_quit) break;
+
+            g_block.dwMessage = AD_MSG_DRAWFRAME;
+            g_block.dwParam   = 0;
+            g_step = "Module(DRAWFRAME)";
+            r = g_proc(&g_block);
+            if (r == AD_RESTART_ME) {
+                g_block.dwMessage = AD_MSG_PREINITIALIZE; g_proc(&g_block);
+                g_block.dwMessage = AD_MSG_BLANK;         g_proc(&g_block);
+            } else if (r != AD_OK) break;
+
+            GetClientRect(wnd, &rc);
+            present_blit(wdc, rc.right, rc.bottom, mem, w, h, integer_scale);
+
+            if (period) {
+                DWORD dt = GetTickCount() - t0;
+                if (dt < period) Sleep(period - dt);
+            }
+        }
+        ReleaseDC(wnd, wdc);
+        if (!parent) ShowCursor(TRUE);
+        g_verbose = 1;
+        goto teardown;
+    }
 
     printf("\n--- %d frames ---\n", frames);
     {
@@ -459,6 +603,7 @@ restart:
     else fail("could not write %s", bmp);
 
     /* -- 9. teardown, in the host's order -- */
+teardown:
     printf("\n--- teardown ---\n");
     send_msg(AD_MSG_CLOSE, 0);
     send_msg(AD_MSG_MODULEDESELECTED, 0);

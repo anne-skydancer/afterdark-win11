@@ -1,0 +1,21 @@
+After Dark Studio
+=================
+
+This software contains no Berkeley Systems code, artwork, or sound.
+
+After Dark Studio is an independent front end. It reads an After Dark
+installation that you already own, on your own machine, at runtime:
+
+  * the engine (ADXPL510.DLL) is loaded from your installation
+  * modules (.AD files) are read and run from your installation
+  * artwork, palettes and sounds stay on your disk and are never copied
+
+Nothing from After Dark is redistributed with this installer.
+
+You need a licensed copy of After Dark 4 for this software to do anything
+useful. If you do not have one, After Dark Studio will start, find no
+installation, and offer to let you point it at one.
+
+After Dark is a trademark of its respective owner. This project is not
+affiliated with, endorsed by, or connected to Berkeley Systems or any
+successor rights holder.

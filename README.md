@@ -6,15 +6,17 @@ application, in which every module is properly configurable.
 
 ## Where this stands
 
-Feasibility is settled, the module ABI has been recovered by disassembly, and
-**a working host now renders real After Dark 4 modules** — Flying Toasters and
-Bad Dog both run, with their settings taking effect. What remains is the
-Windows app around it.
+Feasibility is settled, the module ABI has been recovered by disassembly, a
+working host renders real After Dark 4 modules, and the app around it now
+exists: a 64-bit catalogue and settings UI, a 64-bit `.scr` that drives the
+whole screensaver path, registration without any registry hacks, and an Inno
+Setup 7 installer.
 
 | Document | What it covers |
 |---|---|
 | [docs/FEASIBILITY.md](docs/FEASIBILITY.md) | Verdict and evidence: module ABI, engine dependency, what Windows 11 can and cannot load |
 | [docs/DESIGN.md](docs/DESIGN.md) | The application: architecture, per-module configuration, screensaver registration without registry hacks |
+| [docs/PACKAGING.md](docs/PACKAGING.md) | Architecture (what is 64-bit and what cannot be), the screensaver flow, registration, and the Inno Setup 7 installer |
 | [host/README.md](host/README.md) | `admhost32` — a working 32-bit host that loads and renders real modules |
 | [docs/ABI.md](docs/ABI.md) | The AD4 module ABI, recovered by disassembly: entry point, 348-byte parameter block, message numbering, lifecycle |
 | [docs/REWRITES.md](docs/REWRITES.md) | The 61 16-bit Classic modules, and how to bring them forward as 32-bit rewrites |
@@ -29,6 +31,28 @@ Crucially, **every module's settings are readable from its binary**, in both
 generations — so the configuration UI needs no help from the dead Windows 95
 control panel, and rewrites of the 16-bit modules can honour the original
 controls exactly.
+
+## The application
+
+```
+AfterDark.Studio.exe   x64   catalogue, per-module settings, registration
+AfterDarkModern.scr    x64   /s /p /c, full-screen windows, input, multi-monitor
+admhost32.exe          x86   loads ADXPL510.DLL + the module and renders
+```
+
+Everything is 64-bit except the one process that touches a module, and that is
+not a choice: a 64-bit process cannot load a 32-bit DLL. HWNDs cross the
+boundary fine, so the x64 `.scr` owns the windows and an x86 child renders into
+them. See [docs/PACKAGING.md](docs/PACKAGING.md).
+
+```
+make dist        # build everything into dist/
+make test        # ABI layout check + catalogue tests
+make installer   # Inno Setup 7 (Windows)
+```
+
+Installation writes three values under `HKCU\Control Panel\Desktop` and calls
+`SystemParametersInfo`. No `System32` copy, no `.reg` import, no elevation.
 
 ## Tools
 

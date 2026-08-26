@@ -11,3 +11,9 @@ adxpl*.dll
 __pycache__/
 *.pyc
 ad4.json
+
+# build output
+dist/
+bin/
+obj/
+*.user

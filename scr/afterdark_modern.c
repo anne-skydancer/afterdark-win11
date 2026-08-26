@@ -1,0 +1,336 @@
+/*
+ * AfterDarkModern.scr -- the Windows screensaver front end.
+ *
+ * Built 64-bit. It never loads a module itself, so nothing forces it to x86:
+ * it creates one full-screen window per monitor and spawns a 32-bit
+ * admhost32.exe to render into each. HWNDs are valid across the bitness
+ * boundary, so a 64-bit parent and a 32-bit child share a window fine.
+ *
+ * Implements the standard, unchanged Windows contract:
+ *      /s              run full screen
+ *      /p <hwnd>       render the little preview in the settings dialog
+ *      /c[:<hwnd>]     show configuration (launches After Dark Studio)
+ *
+ * Configuration comes from a small key=value file written by Studio, so the
+ * .scr needs no JSON parser and starts instantly.
+ *
+ *   x86_64-w64-mingw32-gcc -O2 -o AfterDarkModern.scr afterdark_modern.c \
+ *       -lgdi32 -luser32 -lshell32 -mwindows
+ */
+
+#include <windows.h>
+#include <shlobj.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define AD_MAX_MONITORS 8
+
+typedef struct {
+    char install[MAX_PATH];
+    char module[MAX_PATH];
+    char studio[MAX_PATH];
+    char controls[64];
+    char scale[16];
+    int  fps;
+    int  bpp;
+    int  width, height;
+} Config;
+
+static Config      g_cfg;
+static HWND        g_windows[AD_MAX_MONITORS];
+static HANDLE      g_children[AD_MAX_MONITORS];
+static int         g_count;
+static volatile int g_quit;
+static POINT       g_origin;
+static int         g_origin_set;
+
+/* ------------------------------------------------------------------ config */
+
+static void config_defaults(Config *c)
+{
+    ZeroMemory(c, sizeof(*c));
+    c->fps = 30;
+    c->bpp = 8;
+    c->width = 640;
+    c->height = 480;
+    lstrcpynA(c->controls, "0,0,0,0", sizeof(c->controls));
+    lstrcpynA(c->scale, "integer", sizeof(c->scale));
+}
+
+static void trim(char *s)
+{
+    char *e = s + strlen(s);
+    while (e > s && (e[-1] == '\r' || e[-1] == '\n' || e[-1] == ' ' || e[-1] == '\t')) *--e = '\0';
+    while (*s == ' ' || *s == '\t') memmove(s, s + 1, strlen(s));
+}
+
+static void config_path(char *out, size_t n)
+{
+    char base[MAX_PATH];
+    if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, base)))
+        _snprintf(out, n, "%s\\AfterDarkStudio\\saver.cfg", base);
+    else
+        lstrcpynA(out, "saver.cfg", (int)n);
+}
+
+static int config_load(Config *c)
+{
+    char path[MAX_PATH], line[512];
+    FILE *fp;
+
+    config_defaults(c);
+    config_path(path, sizeof(path));
+    fp = fopen(path, "r");
+    if (!fp) return 0;
+
+    while (fgets(line, sizeof(line), fp)) {
+        char *eq;
+        trim(line);
+        if (line[0] == '\0' || line[0] == '#' || line[0] == ';') continue;
+        eq = strchr(line, '=');
+        if (!eq) continue;
+        *eq = '\0';
+        trim(line); trim(eq + 1);
+
+        if      (!_stricmp(line, "install"))  lstrcpynA(c->install, eq + 1, MAX_PATH);
+        else if (!_stricmp(line, "module"))   lstrcpynA(c->module, eq + 1, MAX_PATH);
+        else if (!_stricmp(line, "studio"))   lstrcpynA(c->studio, eq + 1, MAX_PATH);
+        else if (!_stricmp(line, "controls")) lstrcpynA(c->controls, eq + 1, sizeof(c->controls));
+        else if (!_stricmp(line, "scale"))    lstrcpynA(c->scale, eq + 1, sizeof(c->scale));
+        else if (!_stricmp(line, "fps"))      c->fps = atoi(eq + 1);
+        else if (!_stricmp(line, "bpp"))      c->bpp = atoi(eq + 1);
+        else if (!_stricmp(line, "width"))    c->width = atoi(eq + 1);
+        else if (!_stricmp(line, "height"))   c->height = atoi(eq + 1);
+    }
+    fclose(fp);
+    return c->install[0] && c->module[0];
+}
+
+/* Sibling files live next to the .scr. */
+static void beside_me(const char *leaf, char *out, size_t n)
+{
+    char self[MAX_PATH], *slash;
+    GetModuleFileNameA(NULL, self, MAX_PATH);
+    slash = strrchr(self, '\\');
+    if (slash) *slash = '\0';
+    _snprintf(out, n, "%s\\%s", self, leaf);
+}
+
+/* ------------------------------------------------------------------- child */
+
+static HANDLE spawn_host(HWND parent)
+{
+    char exe[MAX_PATH], cmd[2048];
+    STARTUPINFOA si;
+    PROCESS_INFORMATION pi;
+
+    beside_me("admhost32.exe", exe, sizeof(exe));
+
+    _snprintf(cmd, sizeof(cmd),
+              "\"%s\" \"%s\" \"%s\" --parent %llu --fps %d --scale %s "
+              "--bpp %d --size %dx%d --controls %s --quiet",
+              exe, g_cfg.install, g_cfg.module,
+              (unsigned long long)(ULONG_PTR)parent,
+              g_cfg.fps, g_cfg.scale, g_cfg.bpp,
+              g_cfg.width, g_cfg.height, g_cfg.controls);
+
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_HIDE;
+    ZeroMemory(&pi, sizeof(pi));
+
+    if (!CreateProcessA(NULL, cmd, NULL, NULL, FALSE,
+                        CREATE_NO_WINDOW, NULL, g_cfg.install, &si, &pi))
+        return NULL;
+
+    CloseHandle(pi.hThread);
+    return pi.hProcess;
+}
+
+static void stop_children(void)
+{
+    int i;
+    for (i = 0; i < g_count; i++) {
+        if (!g_children[i]) continue;
+        /* The child owns 30-year-old code; ask nicely, then insist. */
+        PostMessageA(g_windows[i], WM_CLOSE, 0, 0);
+        if (WaitForSingleObject(g_children[i], 700) != WAIT_OBJECT_0)
+            TerminateProcess(g_children[i], 0);
+        CloseHandle(g_children[i]);
+        g_children[i] = NULL;
+    }
+}
+
+/* ------------------------------------------------------------------ window */
+
+static LRESULT CALLBACK saver_proc(HWND w, UINT m, WPARAM wp, LPARAM lp)
+{
+    switch (m) {
+    case WM_KEYDOWN: case WM_SYSKEYDOWN: case WM_LBUTTONDOWN:
+    case WM_RBUTTONDOWN: case WM_MBUTTONDOWN:
+        g_quit = 1;
+        return 0;
+
+    case WM_MOUSEMOVE: {
+        POINT p;
+        GetCursorPos(&p);
+        if (!g_origin_set) { g_origin = p; g_origin_set = 1; return 0; }
+        /* Windows generates spurious moves at startup; require real travel. */
+        if (abs(p.x - g_origin.x) > 6 || abs(p.y - g_origin.y) > 6) g_quit = 1;
+        return 0;
+    }
+
+    case WM_SETCURSOR:
+        SetCursor(NULL);
+        return TRUE;
+
+    case WM_DESTROY:
+        g_quit = 1;
+        return 0;
+    }
+    return DefWindowProcA(w, m, wp, lp);
+}
+
+static BOOL CALLBACK on_monitor(HMONITOR mon, HDC dc, LPRECT rc, LPARAM p)
+{
+    MONITORINFO mi;
+    HWND w;
+    (void)dc; (void)rc; (void)p;
+
+    if (g_count >= AD_MAX_MONITORS) return FALSE;
+    mi.cbSize = sizeof(mi);
+    if (!GetMonitorInfoA(mon, &mi)) return TRUE;
+
+    w = CreateWindowExA(WS_EX_TOPMOST, "AfterDarkModernSaver", "After Dark",
+                        WS_POPUP | WS_VISIBLE,
+                        mi.rcMonitor.left, mi.rcMonitor.top,
+                        mi.rcMonitor.right - mi.rcMonitor.left,
+                        mi.rcMonitor.bottom - mi.rcMonitor.top,
+                        NULL, NULL, GetModuleHandle(NULL), NULL);
+    if (!w) return TRUE;
+
+    g_windows[g_count] = w;
+    g_children[g_count] = spawn_host(w);
+    g_count++;
+    return TRUE;
+}
+
+static void register_class(void)
+{
+    WNDCLASSA wc;
+    ZeroMemory(&wc, sizeof(wc));
+    wc.lpfnWndProc   = saver_proc;
+    wc.hInstance     = GetModuleHandle(NULL);
+    wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
+    wc.lpszClassName = "AfterDarkModernSaver";
+    RegisterClassA(&wc);
+}
+
+static int pump_until_quit(void)
+{
+    MSG msg;
+    while (!g_quit) {
+        while (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE)) {
+            if (msg.message == WM_QUIT) { g_quit = 1; break; }
+            TranslateMessage(&msg);
+            DispatchMessageA(&msg);
+        }
+        if (g_quit) break;
+
+        /* If every renderer has died there is nothing left to show. */
+        {
+            int i, alive = 0;
+            for (i = 0; i < g_count; i++)
+                if (g_children[i] &&
+                    WaitForSingleObject(g_children[i], 0) == WAIT_TIMEOUT) alive++;
+            if (g_count > 0 && alive == 0) break;
+        }
+        Sleep(30);
+    }
+    return 0;
+}
+
+/* -------------------------------------------------------------------- main */
+
+static int run_fullscreen(void)
+{
+    int i;
+    if (!config_load(&g_cfg)) return 1;   /* nothing configured: fall back to blank */
+    register_class();
+    EnumDisplayMonitors(NULL, NULL, on_monitor, 0);
+    if (g_count == 0) return 1;
+
+    SetCursor(NULL);
+    pump_until_quit();
+    stop_children();
+    for (i = 0; i < g_count; i++) if (g_windows[i]) DestroyWindow(g_windows[i]);
+    return 0;
+}
+
+static int run_preview(HWND parent)
+{
+    HANDLE child;
+    if (!IsWindow(parent)) return 1;
+    if (!config_load(&g_cfg)) return 1;
+
+    child = spawn_host(parent);
+    if (!child) return 1;
+
+    /* Live only as long as the settings dialog keeps the preview window. */
+    while (IsWindow(parent)) {
+        if (WaitForSingleObject(child, 120) == WAIT_OBJECT_0) break;
+    }
+    if (WaitForSingleObject(child, 0) == WAIT_TIMEOUT) TerminateProcess(child, 0);
+    CloseHandle(child);
+    return 0;
+}
+
+static int run_configure(void)
+{
+    char studio[MAX_PATH];
+    config_load(&g_cfg);
+    if (g_cfg.studio[0]) lstrcpynA(studio, g_cfg.studio, MAX_PATH);
+    else beside_me("AfterDark.Studio.exe", studio, sizeof(studio));
+
+    if ((INT_PTR)ShellExecuteA(NULL, "open", studio, "--configure", NULL, SW_SHOWNORMAL) <= 32) {
+        MessageBoxA(NULL,
+                    "After Dark Studio could not be started.\n\n"
+                    "Reinstall, or run AfterDark.Studio.exe directly to choose a module.",
+                    "After Dark", MB_ICONWARNING | MB_OK);
+        return 1;
+    }
+    return 0;
+}
+
+int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmd, int show)
+{
+    const char *p = cmd;
+    (void)inst; (void)prev; (void)show;
+
+    while (*p == ' ' || *p == '\t') p++;
+
+    /* No arguments at all: Windows means "configure". */
+    if (*p == '\0') return run_configure();
+
+    if (*p == '-' || *p == '/') p++;
+
+    switch (*p) {
+    case 's': case 'S':
+        return run_fullscreen();
+
+    case 'p': case 'P': {
+        const char *q = p + 1;
+        while (*q == ' ' || *q == ':') q++;
+        return run_preview((HWND)(ULONG_PTR)_strtoui64(q, NULL, 0));
+    }
+
+    case 'c': case 'C':
+        return run_configure();
+
+    case 'a': case 'A':   /* password change on 9x; nothing to do on NT */
+    default:
+        return 0;
+    }
+}
