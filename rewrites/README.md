@@ -76,13 +76,22 @@ The fifth batch adds three asset-free geometry modules:
 - `SUNBURST32.AD` preserves Delay while drawing a wall-clock-paced expanding
 	radial field.
 
+The sixth batch adds abstract simulations:
+
+- `SATORI32.AD` preserves Display, Colors, End Clarity, and Knots while drawing
+	mixed fields, pools, rays, waves, and leaf patterns.
+- `SNAKE32.AD` preserves Solution Speed, Maze Complexity, and Pause When Done;
+	it generates a perfect maze and progressively reveals its solved path.
+- `NIRVANA32.AD` preserves Color, Redraw Every, Activity, and Change Color while
+	tracing a persistent flow field using independent palette data.
+
 Build it with:
 
 ```sh
 make rewrite
 ```
 
-The seventeen results are written below `dist/rewrites`. The build generates the
+The twenty results are written below `dist/rewrites`. The build generates the
 documented control-definition resources, compiles them with `windres`, and
 links self-contained x86 DLLs. They do not need `ADXPL510.DLL` or the original
 16-bit modules. `make dist` builds them, and future installer builds place them

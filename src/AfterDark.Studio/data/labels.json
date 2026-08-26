@@ -13,5 +13,9 @@
   "PHOTON32.AD/2": "Always Centered",
   "RAIN.AD/3":     "Clear Screen Frequently",
   "RAIN32.AD/3":   "Clear Screen Frequently",
+  "SNAKE.AD/1":    "Maze Complexity",
+  "SNAKE32.AD/1":  "Maze Complexity",
+  "SNAKE.AD/2":    "Pause When Done",
+  "SNAKE32.AD/2":  "Pause When Done",
   "MESSAGES.AD/0": "Message Speed"
 }

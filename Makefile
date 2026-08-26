@@ -122,6 +122,21 @@ rewrite: prepare-dist
 	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
 		-o $(DIST)/rewrites/SUNBURST32.AD rewrites/sunburst32.c rewrites/admkit.c \
 		$(DIST)/rewrite-build/sunburst32-res.o -lgdi32 -lm
+	$(WINDRES) $(DIST)/rewrite-build/satori32.rc \
+		-O coff -o $(DIST)/rewrite-build/satori32-res.o
+	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
+		-o $(DIST)/rewrites/SATORI32.AD rewrites/satori32.c rewrites/admkit.c \
+		$(DIST)/rewrite-build/satori32-res.o -lgdi32 -lm
+	$(WINDRES) $(DIST)/rewrite-build/snake32.rc \
+		-O coff -o $(DIST)/rewrite-build/snake32-res.o
+	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
+		-o $(DIST)/rewrites/SNAKE32.AD rewrites/snake32.c rewrites/admkit.c \
+		$(DIST)/rewrite-build/snake32-res.o -lgdi32 -lm
+	$(WINDRES) $(DIST)/rewrite-build/nirvana32.rc \
+		-O coff -o $(DIST)/rewrite-build/nirvana32-res.o
+	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
+		-o $(DIST)/rewrites/NIRVANA32.AD rewrites/nirvana32.c rewrites/admkit.c \
+		$(DIST)/rewrite-build/nirvana32-res.o -lgdi32 -lm
 
 prepare-dist:
 	$(PYTHON) -c "from pathlib import Path; Path('$(DIST)').mkdir(parents=True, exist_ok=True)"

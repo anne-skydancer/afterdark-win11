@@ -385,6 +385,55 @@ def main() -> None:
             none(),
         ],
     )
+    write_module(
+        args.output,
+        "satori32",
+        "Satori",
+        [
+            combo_box("Display:", ["Fields", "Pools", "Rays", "Waves",
+                                   "Leaves", "Mix", "Random"], 6),
+            combo_box("Colors:", ["Arizona", "Siberia", "Tijuana", "Pacific",
+                                  "Hawaii", "Nile", "Louisiana", "Camelot",
+                                  "Colorado", "Atlantis", "Outback", "Ithaca",
+                                  "Oz", "Random"], 13),
+            string_slider("End Clarity:", ["1X1", "2X2", "4X4", "8X8",
+                                           "16X16"],
+                          [20, 40, 60, 80, 100], 0),
+            number_slider("Knots:", 1, 20, 1, 31),
+        ],
+    )
+    write_module(
+        args.output,
+        "snake32",
+        "Snake",
+        [
+            number_slider("Solution speed", 1, 9, 1, 0),
+            string_slider("Maze complexit", ["1", "2", "3", "4", "5", "6",
+                                              "7", "8", "9"],
+                          [20, 30, 40, 50, 60, 70, 80, 90, 100], 0),
+            string_slider("Pause when don", ["0 sec", "1 sec", "3 sec", "5 sec",
+                                             "10 sec", "15 sec", "30 sec", "1 min"],
+                          [14, 28, 42, 56, 70, 84, 98, 100], 0),
+            none(),
+        ],
+    )
+    write_module(
+        args.output,
+        "nirvana32",
+        "Nirvana",
+        [
+            combo_box("Color", ["Smooth", "Stripes", "Contrast", "Rainbow",
+                                "Metal", "Lines", "Enamel", "Random"], 7),
+            string_slider("Redraw Every:", ["3 min", "5 min", "10 min",
+                                             "30 min", "60 min"],
+                          [20, 40, 60, 80, 100], 57),
+            string_slider("Activity:", ["Serene", "Calm", "Alert", "Busy",
+                                         "Frenetic"],
+                          [20, 40, 60, 80, 100], 0),
+            string_slider("Change Color:", ["Never", "Rarely", "Often", "Always"],
+                          [25, 50, 75, 100], 0),
+        ],
+    )
 
 
 if __name__ == "__main__":
