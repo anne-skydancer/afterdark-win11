@@ -46,6 +46,22 @@ rewrite: prepare-dist
 	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
 		-o $(DIST)/rewrites/SHAPES32.AD rewrites/shapes32.c \
 		$(DIST)/rewrite-build/shapes32-res.o -lgdi32 -lm
+	$(PYTHON) rewrites/build_procedural_resources.py $(DIST)/rewrite-build
+	$(WINDRES) $(DIST)/rewrite-build/spiral32.rc \
+		-O coff -o $(DIST)/rewrite-build/spiral32-res.o
+	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
+		-o $(DIST)/rewrites/SPIRAL32.AD rewrites/spiral32.c rewrites/admkit.c \
+		$(DIST)/rewrite-build/spiral32-res.o -lgdi32 -lm
+	$(WINDRES) $(DIST)/rewrite-build/tunnel32.rc \
+		-O coff -o $(DIST)/rewrite-build/tunnel32-res.o
+	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
+		-o $(DIST)/rewrites/TUNNEL32.AD rewrites/tunnel32.c rewrites/admkit.c \
+		$(DIST)/rewrite-build/tunnel32-res.o -lgdi32 -lm
+	$(WINDRES) $(DIST)/rewrite-build/zot32.rc \
+		-O coff -o $(DIST)/rewrite-build/zot32-res.o
+	$(CC32) $(CFLAGS) -shared -Wl,--kill-at \
+		-o $(DIST)/rewrites/ZOT32.AD rewrites/zot32.c rewrites/admkit.c \
+		$(DIST)/rewrite-build/zot32-res.o -lgdi32 -lm
 
 prepare-dist:
 	$(PYTHON) -c "from pathlib import Path; Path('$(DIST)').mkdir(parents=True, exist_ok=True)"

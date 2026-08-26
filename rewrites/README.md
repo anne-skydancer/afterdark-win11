@@ -20,16 +20,29 @@ It accumulates independently drawn rectangles, ellipses, triangles, diamonds,
 and crossed lines. An independent 256-entry palette preserves its eight colors
 on the host's production-default 8-bit surface.
 
+The next procedural batch shares the small `admkit` pixel-canvas runtime:
+
+- `SPIRAL32.AD` preserves Max Lines, Min Lines, and Color Cycling while drawing
+	animated rotating chord fields.
+- `TUNNEL32.AD` preserves Direction and Shape choices while drawing inward or
+	outward square, rounded, or alternating nested geometry.
+- `ZOT32.AD` preserves Forkiness and How Often while drawing fading branched
+	lightning.
+
+`admkit` owns only allocation, bounded pixel primitives, palette colors,
+randomness, fading, and HDC presentation. Module lifecycle and behavior remain
+in each module source file.
+
 Build it with:
 
 ```sh
 make rewrite
 ```
 
-The results are `dist/rewrites/MANDEL32.AD` and
-`dist/rewrites/SHAPES32.AD`. The build generates the documented
-control-definition resources, compiles them with `windres`, and links
-self-contained x86 DLLs. They do not need `ADXPL510.DLL` or the original
+The results are written below `dist/rewrites`: `MANDEL32.AD`, `SHAPES32.AD`,
+`SPIRAL32.AD`, `TUNNEL32.AD`, and `ZOT32.AD`. The build generates the
+documented control-definition resources, compiles them with `windres`, and
+links self-contained x86 DLLs. They do not need `ADXPL510.DLL` or the original
 16-bit modules.
 
 The rewrites validate the drop-in contract: catalogue discovery, control slots,
@@ -44,3 +57,4 @@ Validated on Windows 11:
 - all controls decoded from generated type-1000 resources
 - full lifecycle through `admhost32` without an engine
 - nonblank 32-bit output and palette-backed 8-bit output
+- WPF catalogue, generated controls, and streamed live preview

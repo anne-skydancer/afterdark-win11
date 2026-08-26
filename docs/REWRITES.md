@@ -214,12 +214,16 @@ first — that is cheap, and it will move some modules between tiers.*
   module with no bitmap, palette, sound, or art resources. `SHAPES32.AD`
   preserves its `Clear Screen Frequently` and `Color` toggles and renders
   independent accumulating geometric outlines through the same ABI.
-3. **Build the asset pipeline against one Tier 2 module.** `BORIS` is a good
+3. **Add a shared procedural runtime and three-module batch. Done.** `admkit`
+  now provides the bounded canvas primitives shared by `SPIRAL32.AD`,
+  `TUNNEL32.AD`, and `ZOT32.AD`. All three preserve their recovered controls,
+  embed independent palettes, and contain no original assets.
+4. **Build the asset pipeline against one Tier 2 module.** `BORIS` is a good
   target: two controls, recovered above, and a recognisable result that makes
   fidelity easy to judge.
-4. **Then breadth.** With runtime and pipeline done, Tier 1 becomes a
+5. **Then breadth.** With runtime and pipeline done, Tier 1 becomes a
    production line and Tier 2 becomes routine.
-5. **Tier 3 only by demand.** Each is a bespoke project; pick the ones people
+6. **Tier 3 only by demand.** Each is a bespoke project; pick the ones people
    actually miss.
 
 A reasonable v1 target is Tier 1 plus a handful of beloved Tier 2 modules —
@@ -255,9 +259,12 @@ host path or proprietary runtime.
 make rewrite
 admhost32 dist/rewrites dist/rewrites/MANDEL32.AD --frames 3
 admhost32 dist/rewrites dist/rewrites/SHAPES32.AD --frames 80 --controls 0,1,0,0
+admhost32 dist/rewrites dist/rewrites/SPIRAL32.AD --frames 30 --controls 54,28,32,0
+admhost32 dist/rewrites dist/rewrites/TUNNEL32.AD --frames 30 --controls 0,1,0,0
+admhost32 dist/rewrites dist/rewrites/ZOT32.AD --frames 40 --controls 67,0,75,0
 ```
 
-Both rewrites receive the same 348-byte block and lifecycle as an original
+All rewrites receive the same 348-byte block and lifecycle as an original
 module. They carry generated type-1000 resources; catalogue and settings code
 require no rewrite-specific branch. Each also carries an independent PAL
 resource. Measured host output is nonblank at both 32 bpp and the

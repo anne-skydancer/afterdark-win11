@@ -1,0 +1,4 @@
+.gitattributes text eol=lf
+rewrites/*.c text eol=lf
+rewrites/*.h text eol=lf
+rewrites/*.py text eol=lf

@@ -38,9 +38,8 @@ The program refuses to run if built 64-bit or if `AD_MODULE32` is the wrong
 size, rather than failing mysteriously later.
 
 The engine load is optional for independent rewrites. Original AD4 modules
-still require `ADXPL510.DLL`; self-contained PE32 rewrites such as
-`dist/rewrites/MANDEL32.AD` and `dist/rewrites/SHAPES32.AD` load and run
-without it.
+still require `ADXPL510.DLL`; self-contained PE32 modules under
+`dist/rewrites` load and run without it.
 
 ## Run
 
