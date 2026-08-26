@@ -27,6 +27,23 @@ can still load these, so a 32-bit host process can drive them directly. The
 bundled **Classic** modules are 16-bit NE DLLs that no 64-bit Windows can load
 in any process; they need OTVDM or a rewrite.
 
+### Coverage, checked against all 84 modules on the AD4 disc
+
+| Set | Count | Runs on Windows 11 | Settings readable |
+|---|---:|---|---|
+| `AD40/` | 22 | yes | yes |
+| `ENGINE/STARRYNI.AD` | 1 | yes | yes |
+| `CLASSIC/` (the After Dark 3-era library) | 61 | **no — 16-bit** | yes |
+| **Total** | **84** | **23** | **84** |
+
+All 84 expose settings — 248 controls in total (229 value-carrying, plus 19
+buttons that open a module's own dialog). **After Dark 3 is entirely 16-bit**:
+its engine, `ADXPL300.DLL`, is itself an NE binary, so no AD3 screensaver can
+run on 64-bit Windows by any means short of emulation or a rewrite.
+
+**This repository contains none of them.** They are imported from your own disc
+or installation — see below.
+
 Crucially, **every module's settings are readable from its binary**, in both
 generations — so the configuration UI needs no help from the dead Windows 95
 control panel, and rewrites of the 16-bit modules can honour the original

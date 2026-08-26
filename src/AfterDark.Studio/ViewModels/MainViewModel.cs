@@ -111,7 +111,7 @@ public sealed class ModuleViewModel : Bindable
     /// <summary>Any of this module's controls changed value.</summary>
     public event Action? ControlChanged;
 
-    public string Title => Module.Title;
+    public string Title => Module.DisplayTitle;
     public string FileName => Module.FileName;
     public string Credits => Module.Credits;
     public bool CanRun => Module.CanRun;

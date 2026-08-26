@@ -104,8 +104,17 @@ public sealed class ImageReader
         return names;
     }
 
-    public bool HasModuleEntryPoint =>
-        Exports().Any(e => e.Equals("Module", StringComparison.OrdinalIgnoreCase));
+    /// <summary>
+    /// A module exports its entry point either undecorated (the Borland-built
+    /// modules that shipped) or with the MSVC __stdcall decoration.
+    /// AFTERDAR.SCR tries the decorated name first and falls back; STARRYNI.AD,
+    /// the self-contained default in ENGINE/, is the one that needs it.
+    /// </summary>
+    public static bool IsModuleEntryPoint(string name) =>
+        name.Equals("Module", StringComparison.OrdinalIgnoreCase) ||
+        name.Equals("_Module@4", StringComparison.OrdinalIgnoreCase);
+
+    public bool HasModuleEntryPoint => Exports().Any(IsModuleEntryPoint);
 
     // -------------------------------------------------------------- resources
 

@@ -12,6 +12,18 @@ public sealed class AdModule
     public required string Title { get; init; }
     public string Credits { get; init; } = "";
     public required Generation Generation { get; init; }
+
+    /// <summary>"AD40" or "Classic" — how a duplicate title is qualified.</summary>
+    public string GenerationLabel => Generation == Generation.Ad4 ? "AD40" : "Classic";
+
+    /// <summary>
+    /// Set when another module in the same catalogue shares this title. The AD4
+    /// disc ships RAIN.AD in both the AD40 and Classic sets, and two entries
+    /// both reading "Rain" is worse than useless: one runs and one cannot.
+    /// </summary>
+    public string? Qualifier { get; internal set; }
+
+    public string DisplayTitle => Qualifier is null ? Title : $"{Title} ({Qualifier})";
     public required string FormatName { get; init; }
 
     /// <summary>False for 16-bit modules: no 64-bit Windows can load them at all.</summary>
@@ -25,7 +37,7 @@ public sealed class AdModule
     public int SoundCount { get; init; }
     public bool HasPalette { get; init; }
 
-    public override string ToString() => $"{Title} ({FileName})";
+    public override string ToString() => $"{DisplayTitle} ({FileName})";
 }
 
 /// <summary>Scans a folder and describes every module in it. Executes nothing.</summary>
@@ -67,7 +79,37 @@ public static class ModuleCatalog
             try { if (Describe(f) is { } m) found.Add(m); }
             catch { /* one bad file must not stop the scan */ }
         }
+        Disambiguate(found);
         return found;
+    }
+
+    /// <summary>
+    /// Qualify titles that appear more than once, so "Rain" becomes
+    /// "Rain (AD40)" and "Rain (Classic)". Only ambiguous names are touched;
+    /// a unique title is left exactly as the module states it.
+    /// </summary>
+    public static void Disambiguate(IEnumerable<AdModule> modules)
+    {
+        foreach (var group in modules.GroupBy(m => m.Title, StringComparer.OrdinalIgnoreCase))
+        {
+            var items = group.ToList();
+            if (items.Count < 2)
+            {
+                foreach (var m in items) m.Qualifier = null;
+                continue;
+            }
+
+            foreach (var byGen in items.GroupBy(m => m.GenerationLabel))
+            {
+                var same = byGen.ToList();
+                // Generation alone usually separates them; if not, fall back to
+                // the file name, which is unique within a folder by definition.
+                foreach (var m in same)
+                    m.Qualifier = same.Count == 1
+                        ? byGen.Key
+                        : $"{byGen.Key}, {Path.GetFileNameWithoutExtension(m.FileName)}";
+            }
+        }
     }
 
     /// <summary>
