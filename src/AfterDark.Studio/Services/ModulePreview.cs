@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Diagnostics;
+using System.IO;
 using AfterDark.Catalog;
 
 namespace AfterDark.Studio.Services;

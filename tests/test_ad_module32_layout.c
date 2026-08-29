@@ -63,6 +63,10 @@ int main(void)
         printf("\n  message constants do not match the recovered table\n");
         failures++;
     }
+    if (AD_FLAG_SOUND != 0x12) {
+        printf("\n  sound flag does not match the original unmuted host\n");
+        failures++;
+    }
 
     printf("\n%s\n", failures ? "FAILED" : "all offsets match the disassembly");
     return failures ? 1 : 0;

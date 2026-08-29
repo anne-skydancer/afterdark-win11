@@ -41,14 +41,14 @@ contains crashes in 1996-vintage code.
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  AfterDarkStudio.exe            x64, WinUI 3 / Avalonia      │
+│  AfterDark.Studio.exe           x64, WPF / .NET 10           │
 │                                                              │
 │  Module gallery · per-module settings · live preview ·       │
-│  "Set as screensaver" · idle timeout · multi-monitor rules   │
+│  "Set as screensaver" · tray controls · Windows settings    │
 │                                                              │
 │  Owns: settings store (JSON), module catalogue, registry     │
 └───────────────┬──────────────────────────────────────────────┘
-                │  IPC: named pipe + shared-memory surface
+                │  IPC: command line + stdout BGRA frame stream
                 │  (control values down, frames/state up)
 ┌───────────────▼──────────────────────────────────────────────┐
 │  admhost32.exe                  x86 — REQUIRED               │
@@ -162,18 +162,18 @@ AFTERDRK.INI" compatibility toggle. One-way sync by default, in that direction.
 | `/p <hwnd>` | Render a preview into the tiny monitor thumbnail |
 | `/c[:<hwnd>]` | Show configuration — launch the UI shell |
 
-Registration is three values under `HKCU\Control Panel\Desktop`, written by the
-app with no elevation:
+Registration uses the per-user values under `HKCU\Control Panel\Desktop`, with
+no elevation. Studio changes only the selected saver and activates it:
 
 ```
 SCRNSAVE.EXE       = <full path to AfterDarkModern.scr>
 ScreenSaveActive   = "1"
-ScreenSaveTimeOut  = "600"
-ScreenSaverIsSecure = "0" | "1"     (require sign-in on resume)
 ```
 
-Then broadcast `WM_SETTINGCHANGE` / call `SystemParametersInfo` so the running
-shell picks it up. That is the entire installation. No `System32`, no `.reg`.
+`ScreenSaveTimeOut` and `ScreenSaverIsSecure` remain Windows-owned settings;
+Studio opens the native screensaver control panel for them and never maintains
+a competing copy. It calls `SystemParametersInfo` to activate the saver in the
+running session. No `System32`, no `.reg`.
 
 ---
 
@@ -190,7 +190,7 @@ concern, not a module concern — the modules are left untouched.
 | **Resolution.** Authored for 640×480 / 800×600. | Render at native module resolution, then integer-scale (nearest-neighbour) to the display. Integer scaling preserves the pixel art; smooth scaling destroys it. Offer letterbox / stretch / tile. |
 | **Multi-monitor.** The engine has `GetMonitorCount` / `BlankOtherMonitors`, but the era's assumptions are shaky. | Safest: one host process per monitor, each with its own module instance. Also enables different modules per display. |
 | **Per-monitor DPI.** Did not exist. | Declare the host DPI-aware and do the scaling yourself; never let Windows bitmap-stretch the window. |
-| **Crashes.** 30-year-old code, unusual inputs. | Already contained: the host is a separate process. On crash, log it, mark the module, fall back to blank. Never take the UI or the lock screen down. |
+| **Crashes.** 30-year-old code, unusual inputs. | Contained in the x86 host. The `.scr` suppresses child crash UI and retries once with Flying Toasters or Starry Night, so a fault never leaves a blank preview or lock screen. |
 | **Secure resume.** AD4 called `PASSWORD.CPL`. | Do not reimplement. Set `ScreenSaverIsSecure` and let Windows handle sign-in. |
 
 ---
@@ -214,6 +214,17 @@ concern, not a module concern — the modules are left untouched.
   and worth keeping.
 - **Health panel.** Surface the inventory tool's findings: which modules are
   hostable, which need a rewrite, whether `ADXPL510.DLL` was found.
+- **Tray control.** Closing Studio hides it to a native notification-area `AD`
+  monogram. The tray menu exposes every runnable module as a radio choice for
+  one-click activation, plus Open, Windows settings, and Exit commands.
+- **Companion media.** Import preserves user-owned `AD40\PICTURES` files under
+  `modules\PICTURES`. Art Critic is already a hostable PE32 module; Studio
+  points its legacy `Art Path` preference at that folder instead of modifying
+  the binary.
+- **Sound.** The host reproduces the original unmuted `AD_MODULE32` flags and
+  initializes ADXPL510's legacy `AD Data Files` profile path. Import places the
+  five external MIDI tracks under `modules\Music` with the long filenames the
+  modules request. Embedded WAV effects remain inside the user's `.AD` files.
 
 ---
 

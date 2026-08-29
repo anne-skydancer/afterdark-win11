@@ -26,6 +26,11 @@ admhost32.exe          PE32  executable (console) Intel 80386
 The split costs nothing and buys crash isolation: a 1996 module that faults
 takes down a child process, not the UI and not the lock screen.
 
+The `.scr` also owns recovery. If a renderer exits unexpectedly, Windows Error
+Reporting UI is suppressed and that monitor/preview retries once with Flying
+Toasters, then Starry Night when available. This keeps the isolated failure
+from turning into a blank error dialog in Screen Saver Settings.
+
 **HWNDs cross the boundary safely.** A window handle is a 32-bit value even in
 64-bit processes, so the x64 `.scr` creates a window per monitor and passes its
 handle to an x86 child, which renders into it as a child window. That is how
@@ -143,7 +148,13 @@ imports them from your own media instead:
 3. It copies `*.AD` and the engine into `{app}\modules`, and the Classic set
    into `{app}\modules\classic`. The two must stay apart: `RAIN.AD` exists in
    both — they are different screen savers, "Rainforest" and "Hard Rain".
-4. It seeds the machine-wide default to a module worth showing, preferring
+4. It copies Art Critic's supported BMP/GIF/JPEG files from the disc's
+   `AD40\PICTURES` into `{app}\modules\PICTURES`. Studio then seeds the original
+   module's per-user `Art Path` preference on first launch.
+5. It copies five external MIDI files into `{app}\modules\Music`, renaming
+   `BABY.MID` and `TOASTERS.MID` to the long paths Flying Toasters embeds.
+   Other sound effects remain resources inside the imported modules.
+6. It seeds the machine-wide default to a module worth showing, preferring
    Flying Toasters and falling back to Starry Night (which needs no engine).
 
 **This replaces a step Windows can no longer perform.** After Dark 4's own
@@ -196,30 +207,30 @@ preferences out of their profile is not an uninstaller's decision.
 
 Studio publishes **self-contained win-x64**, so the installer needs no .NET
 runtime prerequisite. That costs roughly 90 MB in `dist/`. For a smaller
-download, drop `--self-contained` and add a .NET 8 Desktop Runtime check to
+download, drop `--self-contained` and add a .NET 10 Desktop Runtime check to
 `[Code]`; the trade is a prerequisite the user may have to install.
 
 ---
 
 ## 4. Registration, in full
 
-Three values, `HKEY_CURRENT_USER\Control Panel\Desktop`:
+Studio writes two values under `HKEY_CURRENT_USER\Control Panel\Desktop`:
 
 ```
 SCRNSAVE.EXE        = C:\...\AfterDarkModern.scr     (full path)
 ScreenSaveActive    = "1"
-ScreenSaveTimeOut   = "600"                          (seconds)
-ScreenSaverIsSecure = "0" | "1"
 ```
 
-then `SystemParametersInfo` with `SPIF_SENDCHANGE` so the running session picks
-it up — without that the registry is right but the current session keeps the
-old timeout until sign-out.
+then `SystemParametersInfo(SPI_SETSCREENSAVEACTIVE)` with `SPIF_SENDCHANGE` so
+the running session picks it up. `ScreenSaveTimeOut` and
+`ScreenSaverIsSecure` are deliberately left untouched: Windows owns those
+preferences, and Studio links to the native control panel rather than creating
+a second source of truth.
 
 `HKCU\Control Panel\Desktop` is not subject to WOW64 registry redirection, so
 the 64-bit shell writes exactly the keys a 32-bit one would. Secure resume is
-delegated to Windows via `ScreenSaverIsSecure`; AD4's `PASSWORD.CPL` call has no
-modern equivalent and needs none.
+delegated entirely to Windows; AD4's `PASSWORD.CPL` call has no modern
+equivalent and needs none.
 
 ---
 
@@ -250,10 +261,10 @@ make test        # ABI layout check + catalogue tests
 make installer   # Inno Setup 7
 ```
 
-The `.iss` has been compiled with the real Inno Setup 7.1.0 compiler; it
-produces `AfterDarkStudio-0.1.0-setup.exe`, a genuine x86-64 binary (machine
-type `0x8664`), which is `SetupArchitecture=x64` doing its job.
+The `.iss` has been compiled with the real Inno Setup 7 compiler; it produces
+`AfterDarkStudio-0.1.6-setup.exe`, a genuine x86-64 binary (machine type
+`0x8664`), which is `SetupArchitecture=x64` doing its job.
 
-Cross-building from Linux needs `mingw-w64` (i686 **and** x86_64) and the .NET 8
+Cross-building from Linux needs `mingw-w64` (i686 **and** x86_64) and the .NET 10
 SDK. On Windows, use MSVC for the two native pieces and `dotnet publish` for the
 shell; the `dist/` layout is identical either way.

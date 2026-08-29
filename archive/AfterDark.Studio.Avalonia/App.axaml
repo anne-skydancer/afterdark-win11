@@ -1,0 +1,12 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="AfterDark.Studio.App"
+             RequestedThemeVariant="Default">
+  <Application.Styles>
+    <FluentTheme />
+  </Application.Styles>
+  <Application.Resources>
+    <SolidColorBrush x:Key="Ok"       Color="#5BC98B" />
+    <SolidColorBrush x:Key="Warn"     Color="#E4744F" />
+  </Application.Resources>
+</Application>

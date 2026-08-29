@@ -73,6 +73,19 @@ static LONG CALLBACK crash_filter(EXCEPTION_POINTERS *ep)
     return EXCEPTION_CONTINUE_SEARCH;
 }
 
+static void configure_engine_folders(const char *install)
+{
+    char local[MAX_PATH], ini[MAX_PATH];
+
+    WriteProfileStringA("Berkeley Systems", "AD Data Files", install);
+
+    if (GetEnvironmentVariableA("LOCALAPPDATA", local, sizeof(local)) > 0) {
+        _snprintf(ini, sizeof(ini), "%s\\AfterDarkStudio", local);
+        CreateDirectoryA(ini, NULL);
+        WriteProfileStringA("Berkeley Systems", "AD Ini Files", ini);
+    }
+}
+
 /* ------------------------------------------------------------------- BMP  */
 
 static int save_bmp(const char *path, HBITMAP bmp, HDC dc, int w, int h, int bpp)
@@ -363,6 +376,7 @@ static void usage(void)
 "  --size WxH      surface size (default 640x480)\n"
 "  --bpp 8|32      surface depth (default 8, as modules expect)\n"
 "  --controls a,b,c,d   iControlValue[0..3] (default 0,0,0,0)\n"
+"  --button N      dispatch control button slot N after BLANK\n"
 "  --bmp FILE      write the final surface (default admhost32.bmp)\n"
 "  --fps N         frame pacing; 0 = unpaced like the original (default 30)\n"
 "  --present       show a window and run until input (screensaver mode)\n"
@@ -378,13 +392,14 @@ int main(int argc, char **argv)
 {
     char install[MAX_PATH], modpath[MAX_PATH], engine[MAX_PATH];
     const char *bmp = "admhost32.bmp";
-    int  frames = 60, w = 640, h = 480, bpp = 8, fps = 30;
+    int  frames = 60, w = 640, h = 480, bpp = 8, fps = 30, button = -1;
     int  present = 0, integer_scale = 1, stream = 0;
+    int  is_rewrite = 0;
     HWND parent = NULL;
     int  ctl[4] = {0,0,0,0};
     int  i, r, restarts = 0;
-    HMODULE hEngine, hMod;
-    HWND    wnd;
+    HMODULE hEngine = NULL, hMod;
+    HWND    wnd, module_wnd;
     HDC     screen, mem;
     HBITMAP dib, old;
     HPALETTE pal = NULL;
@@ -393,6 +408,10 @@ int main(int argc, char **argv)
     DWORD   stride, imgbytes;
 
     if (argc < 3) { usage(); return 2; }
+
+    /* A module crash is reported to the parent by process exit. Never let WER
+     * put up an error dialog from the isolated renderer process. */
+    SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
 
     lstrcpynA(install, argv[1], MAX_PATH);
     lstrcpynA(modpath, argv[2], MAX_PATH);
@@ -405,6 +424,8 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--size") && i+1 < argc) sscanf(argv[++i], "%dx%d", &w, &h);
         else if (!strcmp(argv[i], "--controls") && i+1 < argc)
             sscanf(argv[++i], "%d,%d,%d,%d", &ctl[0], &ctl[1], &ctl[2], &ctl[3]);
+        else if (!strcmp(argv[i], "--button") && i+1 < argc)
+            button = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--stream")) stream = 1;
         else if (!strcmp(argv[i], "--present")) present = 1;
         else if (!strcmp(argv[i], "--parent") && i+1 < argc)
@@ -449,12 +470,12 @@ int main(int argc, char **argv)
     step("LoadLibrary ADXPL510.DLL");
     hEngine = LoadLibraryA(engine);
     if (!hEngine) {
-        fail("could not load %s", engine);
-        fprintf(AD_OUT, "\n  The engine must load before any module: modules import\n"
-               "  150-300 functions from it and will not bind without it.\n");
-        return 1;
+        fprintf(AD_OUT, "  [ ?? ] engine not found; trying a self-contained module\n");
     }
-    ok("engine at 0x%08lX", (unsigned long)(ULONG_PTR)hEngine);
+    else {
+        configure_engine_folders(install);
+        ok("engine at 0x%08lX", (unsigned long)(ULONG_PTR)hEngine);
+    }
 
     /* -- 2. the module -- */
     if (!strchr(modpath, '\\') && !strchr(modpath, '/')) {
@@ -464,8 +485,15 @@ int main(int argc, char **argv)
     }
     step("LoadLibrary the module");
     hMod = LoadLibraryA(modpath);
-    if (!hMod) { fail("could not load %s", modpath); return 1; }
+    if (!hMod) {
+        fail("could not load %s", modpath);
+        if (!hEngine)
+            fprintf(AD_OUT, "\n  Original AD4 modules require ADXPL510.DLL; "
+                   "self-contained rewrites do not.\n");
+        return 1;
+    }
     ok("module at 0x%08lX", (unsigned long)(ULONG_PTR)hMod);
+    is_rewrite = FindResourceA(hMod, MAKEINTRESOURCEA(1), "AD_REWRITE") != NULL;
 
     /* -- 3. the entry point: decorated first, then undecorated -- */
     step("GetProcAddress " AD_ENTRY_DECORATED " / " AD_ENTRY_UNDECORATED);
@@ -476,6 +504,25 @@ int main(int argc, char **argv)
         if (g_proc) ok("resolved %s (undecorated)", AD_ENTRY_UNDECORATED);
     }
     if (!g_proc) { fail("no Module entry point -- is this an After Dark module?"); return 1; }
+
+    /* Independent rewrites do not need a monitor-sized module DIB. Keep their
+     * render surface bounded and let the existing presentation path scale it
+     * to a 4K parent window. This also keeps frame pacing and timed controls
+     * stable on very large displays. */
+    if ((is_rewrite || !hEngine) && (w > 1920 || h > 1080)) {
+        int requested_w = w, requested_h = h;
+        if ((LONGLONG)w * 1080 > (LONGLONG)h * 1920) {
+            h = (int)((LONGLONG)h * 1920 / w);
+            w = 1920;
+        } else {
+            w = (int)((LONGLONG)w * 1080 / h);
+            h = 1080;
+        }
+        if (w < 1) w = 1;
+        if (h < 1) h = 1;
+        fprintf(AD_OUT, "  [ .. ] bounded self-contained surface %dx%d -> %dx%d\n",
+                requested_w, requested_h, w, h);
+    }
 
     /* -- 4. an offscreen surface and its DC: this is the module's hDC -- */
     step("create DIB section + memory DC");
@@ -540,19 +587,28 @@ int main(int argc, char **argv)
         }
         if (!wnd) { fail("could not create the presentation window"); return 1; }
         SetFocus(wnd);
+
+        /* The presentation target can be a 152x112 preview or a 4K monitor,
+         * while the module renders into a fixed-size offscreen surface. Keep
+         * its HWND geometry consistent with that HDC/rcClient contract. */
+        module_wnd = CreateWindowExA(0, "STATIC", "admhost32_module", WS_POPUP,
+                                     0, 0, w, h, NULL, NULL,
+                                     GetModuleHandle(NULL), NULL);
+        if (!module_wnd) { fail("could not create the module window"); return 1; }
     } else {
         step("create hidden window");
         wnd = CreateWindowExA(0, "STATIC", "admhost32", WS_POPUP,
                               0, 0, w, h, NULL, NULL, GetModuleHandle(NULL), NULL);
         if (!wnd) fail("CreateWindow (continuing with NULL hWnd)");
+        module_wnd = wnd;
     }
 
     /* -- 6. fill the block -- */
     step("populate AD_MODULE32");
     ZeroMemory(&g_block, sizeof(g_block));
     g_block.cbSize    = AD_MODULE32_SIZE;
-    g_block.dwFlags   = (bpp <= 8) ? AD_FLAG_PALETTE : 0;
-    g_block.hWnd      = wnd;
+    g_block.dwFlags   = AD_FLAG_SOUND | ((bpp <= 8) ? AD_FLAG_PALETTE : 0);
+    g_block.hWnd      = module_wnd;
     g_block.hModule   = hMod;
     g_block.hDC       = mem;                  /* the module draws here */
     SetRect(&g_block.rcClient, 0, 0, w, h);
@@ -584,6 +640,7 @@ restart:
     if (send_msg(AD_MSG_PREINITIALIZE, 0) != AD_OK)
         fprintf(AD_OUT, "  (PREINITIALIZE non-zero)\n");
     send_msg(AD_MSG_BLANK, 0);
+    if (button >= 0) send_msg(AD_MSG_BUTTON, (DWORD)(button & 0xFFFF));
 
     /* Modules repaint only damaged rectangles each DRAWFRAME. Without one full
      * repaint first, every pixel the module has not touched yet keeps whatever
@@ -741,10 +798,11 @@ teardown:
     DeleteObject(dib);
     DeleteDC(mem);
     ReleaseDC(NULL, screen);
+    if (module_wnd && module_wnd != wnd) DestroyWindow(module_wnd);
     if (wnd) DestroyWindow(wnd);
     free(bi);
     FreeLibrary(hMod);
-    FreeLibrary(hEngine);
+    if (hEngine) FreeLibrary(hEngine);
 
     fprintf(AD_OUT, "\ndone.\n");
     return 0;

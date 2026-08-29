@@ -30,8 +30,6 @@ public sealed class StudioSettings
 {
     public string? InstallPath { get; set; }
     public string? SelectedModule { get; set; }
-    public int TimeoutMinutes { get; set; } = 10;
-    public bool SecureResume { get; set; }
     public int TargetFps { get; set; } = 30;
     public string ScalingMode { get; set; } = "Integer";
     public Dictionary<string, ModuleSettings> Modules { get; set; } = new(StringComparer.OrdinalIgnoreCase);

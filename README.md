@@ -6,27 +6,30 @@ application, in which every module is properly configurable.
 
 ## Download
 
-**[AfterDarkStudio-0.1.0-setup.exe](https://github.com/anne-skydancer/afterdark-win11/releases/latest)** — 64-bit, system-wide,
-self-contained (32.2 MB). Checksum and full notes in
+**[AfterDarkStudio-0.1.6-setup.exe](releases/AfterDarkStudio-0.1.6-setup.exe)** —
+64-bit, system-wide, self-contained (49.9 MiB). Checksum and full notes in
 [releases/](releases/README.md).
 
-```
-SHA-256  2c57021bbbee0ad7e1edd2e060ce999bb975b873484de00c27c3f2d5cdabfb58
-```
+The Studio UI and real disc catalogue have now been exercised on Windows 11.
+The installer is not code-signed, so SmartScreen will warn.
 
-Two things to know before you run it: **it has never been run on Windows 11**
-(everything was verified through Wine on Linux against the real modules, engine
-and Inno compiler), and **it is not code-signed**, so SmartScreen will warn.
+It ships no Berkeley Systems screen savers. Setup imports them from your own
+After Dark 4 disc or installation — which also replaces AD4's own installer,
+that being 16-bit and unable to run on Windows 11 at all. Independent
+clean-room Classic rewrites built by this project are included separately.
 
-It ships no screen savers. Setup imports them from your own After Dark 4 disc or
-installation — which also replaces AD4's own installer, that being 16-bit and
-unable to run on Windows 11 at all.
+Companion media stays user-owned too. In particular, Setup imports Art Critic's
+`PICTURES` folder from the disc and Studio points the original 32-bit module at
+that local copy; neither the images nor a modified module are distributed.
+Setup also imports the five external MIDI tracks needed by Points of View,
+Slow Burn, Swirling Magic, and Flying Toasters. Embedded sound effects continue
+to load from the user's original module files.
 
 ## Where this stands
 
 Feasibility is settled, the module ABI has been recovered by disassembly, a
 working host renders real After Dark 4 modules, and the app around it now
-exists: a 64-bit catalogue and settings UI, a 64-bit `.scr` that drives the
+exists: a native WPF/.NET 10 catalogue and settings UI, a 64-bit `.scr` that drives the
 whole screensaver path, registration without any registry hacks, and an Inno
 Setup 7 installer.
 
@@ -38,6 +41,7 @@ Setup 7 installer.
 | [host/README.md](host/README.md) | `admhost32` — a working 32-bit host that loads and renders real modules |
 | [docs/ABI.md](docs/ABI.md) | The AD4 module ABI, recovered by disassembly: entry point, 348-byte parameter block, message numbering, lifecycle |
 | [docs/REWRITES.md](docs/REWRITES.md) | The 61 16-bit Classic modules, and how to bring them forward as 32-bit rewrites |
+| [archive/AfterDark.Studio.Avalonia](archive/AfterDark.Studio.Avalonia) | Buildable archive of the former Avalonia Studio shell |
 
 **The short version.** After Dark 4's own (`AD40`) modules are 32-bit PE DLLs
 exporting a `Module` entry point against the `ADXPL510.DLL` engine — Windows 11
@@ -80,8 +84,16 @@ not a choice: a 64-bit process cannot load a 32-bit DLL. HWNDs cross the
 boundary fine, so the x64 `.scr` owns the windows and an x86 child renders into
 them. See [docs/PACKAGING.md](docs/PACKAGING.md).
 
+Studio remains in the Windows notification area when its window is closed. The
+`AD` tray menu switches directly between runnable modules, reopens Studio, and
+links to the native Windows screensaver settings. Windows remains the sole
+owner of the idle timeout and sign-in-on-resume preferences. The same
+multi-resolution `AD` monogram is embedded in the Studio executable and used
+by its window and notification-area icon.
+
 ```
 make dist        # build everything into dist/
+make rewrite     # build the independent Classic module rewrites
 make test        # ABI layout check + catalogue tests
 make installer   # Inno Setup 7 (Windows)
 ```

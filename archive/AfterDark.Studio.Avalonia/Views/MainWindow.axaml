@@ -1,0 +1,198 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:AfterDark.Studio.ViewModels"
+        x:Class="AfterDark.Studio.Views.MainWindow"
+        Title="After Dark Studio" Width="1100" Height="700"
+        MinWidth="820" MinHeight="560"
+        Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
+
+  <Window.Styles>
+    <Style Selector="TextBlock.h1">
+      <Setter Property="FontSize" Value="20"/><Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.h2">
+      <Setter Property="FontSize" Value="12"/><Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+      <Setter Property="LetterSpacing" Value="1.2"/>
+    </Style>
+    <Style Selector="TextBlock.muted">
+      <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}"/><Setter Property="FontSize" Value="12"/>
+    </Style>
+    <Style Selector="Border.card">
+      <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundBaseLowBrush}"/>
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    <Style Selector="Border.badge">
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="Padding" Value="6,1"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+  </Window.Styles>
+
+  <Grid RowDefinitions="Auto,*,Auto">
+
+    <!-- header -->
+    <Border Grid.Row="0" Background="{DynamicResource SystemControlBackgroundBaseLowBrush}" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+            BorderThickness="0,0,0,1" Padding="18,14">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <StackPanel Grid.Column="0" Spacing="2">
+          <TextBlock Classes="h1" Text="After Dark Studio"/>
+          <TextBlock Classes="muted" Text="{Binding InstallPath}"/>
+        </StackPanel>
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <Button Name="ImportModules" Content="Import from disc" Padding="12,6"
+              Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+          <TextBlock Classes="muted" VerticalAlignment="Center" Text="{Binding CountLine}"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- body -->
+    <Grid Grid.Row="1" ColumnDefinitions="330,*">
+
+      <!-- module list -->
+      <Border Grid.Column="0" Background="{DynamicResource SystemControlBackgroundAltHighBrush}" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+              BorderThickness="0,0,1,0">
+        <Grid RowDefinitions="Auto,*">
+          <StackPanel Grid.Row="0" Margin="14,14,14,10" Spacing="8">
+            <TextBox Watermark="Search modules" Text="{Binding Filter}"
+                     Background="{DynamicResource SystemControlBackgroundAltMediumLowBrush}" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"/>
+            <CheckBox IsChecked="{Binding RunnableOnly}" Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                      FontSize="12" Content="Runnable only"/>
+          </StackPanel>
+
+          <ListBox Grid.Row="1" ItemsSource="{Binding Visible}" SelectedItem="{Binding Selected}"
+                   Background="Transparent" BorderThickness="0" Padding="8,0,8,10">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Grid ColumnDefinitions="*,Auto" Margin="2,6">
+                  <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding Title}" Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                               FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding StatusLine}" Classes="muted" FontSize="11"/>
+                  </StackPanel>
+                  <Border Grid.Column="1" Classes="badge"
+                          Background="{Binding BadgeBrush}">
+                    <TextBlock Text="{Binding Badge}" FontSize="10" FontWeight="SemiBold"
+                               Foreground="#12131A"/>
+                  </Border>
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </Border>
+
+      <!-- detail -->
+      <Grid Grid.Column="1">
+        <ScrollViewer Padding="24" IsVisible="{Binding HasModules}">
+          <StackPanel Spacing="16" DataContext="{Binding Selected}">
+
+          <StackPanel Spacing="4">
+            <TextBlock Classes="h1" Text="{Binding Title}"/>
+            <TextBlock Classes="muted" Text="{Binding Credits}" TextWrapping="Wrap"/>
+          </StackPanel>
+
+          <!-- live preview: frames streamed from admhost32 -->
+          <Border Classes="card" Height="260" ClipToBounds="True">
+            <Grid>
+              <Border Background="#000000" CornerRadius="9"/>
+              <Image Name="PreviewImage" Stretch="Uniform"
+                     RenderOptions.BitmapInterpolationMode="None"/>
+              <StackPanel Name="PreviewMessage" VerticalAlignment="Center"
+                          HorizontalAlignment="Center" Spacing="6">
+                <TextBlock Text="▶" FontSize="30" HorizontalAlignment="Center"
+                           Foreground="{DynamicResource SystemControlHighlightAccentBrush}"/>
+                <TextBlock Name="PreviewMessageText" Classes="muted"
+                           HorizontalAlignment="Center" TextWrapping="Wrap"
+                           MaxWidth="380" TextAlignment="Center"
+                           Text="Starting preview…"/>
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <!-- 16-bit warning -->
+          <Border Classes="card" IsVisible="{Binding !CanRun}" Padding="14"
+              BorderBrush="{StaticResource Warn}">
+            <StackPanel Spacing="4">
+              <TextBlock Text="This module cannot run on 64-bit Windows"
+                         Foreground="{StaticResource Warn}" FontWeight="SemiBold"/>
+              <TextBlock Classes="muted" TextWrapping="Wrap"
+                         Text="It is a 16-bit NE binary. No 64-bit Windows can load it in any process. Its settings are still readable, so a native rewrite can honour them exactly."/>
+            </StackPanel>
+          </Border>
+
+          <!-- settings -->
+          <StackPanel Spacing="10" IsVisible="{Binding HasControls}">
+            <TextBlock Classes="h2" Text="SETTINGS"/>
+            <ItemsControl ItemsSource="{Binding Controls}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Classes="card" Padding="14" Margin="0,0,0,8">
+                    <Grid ColumnDefinitions="180,*,90">
+                      <TextBlock Grid.Column="0" Text="{Binding Title}" Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                 VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+
+                      <ComboBox Grid.Column="1" IsVisible="{Binding IsChoice}" HorizontalAlignment="Stretch"
+                                ItemsSource="{Binding Options}" SelectedItem="{Binding SelectedOption}"
+                                Background="{DynamicResource SystemControlBackgroundAltMediumLowBrush}">
+                        <ComboBox.ItemTemplate>
+                          <DataTemplate><TextBlock Text="{Binding Label}"/></DataTemplate>
+                        </ComboBox.ItemTemplate>
+                      </ComboBox>
+
+                      <ToggleSwitch Grid.Column="1" IsVisible="{Binding IsToggle}"
+                                    IsChecked="{Binding IsChecked}" OnContent="" OffContent=""/>
+
+                      <Slider Grid.Column="1" IsVisible="{Binding IsNumber}"
+                              Minimum="{Binding Minimum}" Maximum="{Binding Maximum}"
+                              Value="{Binding Number}" TickFrequency="1" IsSnapToTickEnabled="True"/>
+
+                      <TextBlock Grid.Column="2" Text="{Binding Summary}" Classes="muted"
+                                 HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+
+          <Border Classes="card" Padding="14" IsVisible="{Binding HasNoControls}">
+            <TextBlock Classes="muted" Text="This module exposes no configurable settings."/>
+          </Border>
+
+          </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel IsVisible="{Binding HasNoModules}" HorizontalAlignment="Center"
+                    VerticalAlignment="Center" Spacing="8" MaxWidth="420">
+          <TextBlock Classes="h1" Text="Bring your After Dark collection" TextAlignment="Center"/>
+          <TextBlock Classes="muted" TextAlignment="Center" TextWrapping="Wrap"
+                     Text="Import from your mounted After Dark disc or an existing installation. Your source files stay untouched."/>
+        </StackPanel>
+      </Grid>
+    </Grid>
+
+    <!-- footer -->
+    <Border Grid.Row="2" Background="{DynamicResource SystemControlBackgroundBaseLowBrush}" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+            BorderThickness="0,1,0,0" Padding="18,12">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+        <Button Grid.Column="0" Name="OpenScreenSaverSettings" Content="Windows screensaver settings"
+                Padding="12,6" ToolTip.Tip="Windows controls the timeout and sign-in-on-resume settings."/>
+        <TextBlock Grid.Column="1" Classes="muted" VerticalAlignment="Center" Margin="18,0"
+                   Text="{Binding Status}" TextTrimming="CharacterEllipsis"/>
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="14" Margin="0,0,14,0">
+          <CheckBox IsChecked="{Binding ApplyToAllUsers}" IsEnabled="{Binding CanApplyToAllUsers}"
+                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" Content="Default for all users"
+                    ToolTip.Tip="Publishes this module and its settings as the machine-wide default. Which screensaver is active stays per-user - Windows has no machine-wide setting for that. Needs administrator rights."/>
+        </StackPanel>
+        <Button Grid.Column="3" Name="SetSaver" Classes="accent" Content="Set as screensaver" Padding="16,7"
+          FontWeight="SemiBold"
+          IsEnabled="{Binding CanSetScreenSaver}"/>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

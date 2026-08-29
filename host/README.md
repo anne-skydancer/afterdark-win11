@@ -37,6 +37,17 @@ cl /O2 admhost32.c user32.lib gdi32.lib     # MSVC, 32-bit toolchain
 The program refuses to run if built 64-bit or if `AD_MODULE32` is the wrong
 size, rather than failing mysteriously later.
 
+The engine load is optional for independent rewrites. Original AD4 modules
+still require `ADXPL510.DLL`; self-contained PE32 modules under
+`dist/rewrites` load and run without it.
+
+For engine-free modules, requested surfaces larger than 1920x1080 are bounded
+before DIB allocation and then scaled through the existing presentation path.
+This keeps frame pacing stable on 4K displays without changing original AD4
+modules, which continue to use their configured legacy surface. Clean-room
+modules identify themselves with an `AD_REWRITE` resource, so classification
+does not depend on whether an engine DLL happens to be present.
+
 ## Run
 
 ```
@@ -47,6 +58,7 @@ admhost32 <install-dir> <module.AD> [options]
   --size WxH           surface size (default 640x480)
   --bpp 8|32           surface depth (default 8)
   --controls a,b,c,d   iControlValue[0..3]
+  --button N           dispatch control button slot N after BLANK
   --bmp FILE           write the final surface
   --present            show a window and run until input (screensaver mode)
   --parent HWND        render inside an existing window; implies --present

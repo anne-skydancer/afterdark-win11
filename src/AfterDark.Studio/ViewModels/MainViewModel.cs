@@ -115,9 +115,9 @@ public sealed class ModuleViewModel : Bindable
     public string FileName => Module.FileName;
     public string Credits => Module.Credits;
     public bool CanRun => Module.CanRun;
+    public bool CannotRun => !Module.CanRun;
     public string Badge => Module.CanRun ? "AD4" : "16-bit";
-    public Avalonia.Media.IBrush BadgeBrush => new Avalonia.Media.SolidColorBrush(
-        Avalonia.Media.Color.Parse(Module.CanRun ? "#5BC98B" : "#E4744F"));
+    public string BadgeColor => Module.CanRun ? "#5BC98B" : "#E4744F";
     public string StatusLine => Module.CanRun
         ? $"{Module.FormatName} · {Controls.Count} setting{(Controls.Count == 1 ? "" : "s")}"
         : "Cannot run on 64-bit Windows";
@@ -142,20 +142,35 @@ public sealed class MainViewModel : Bindable
 
     public ObservableCollection<ModuleViewModel> All { get; } = [];
     public ObservableCollection<ModuleViewModel> Visible { get; } = [];
+    public event Action? CatalogChanged;
+    public event Action? ScreenSaverChanged;
 
     public MainViewModel(StudioSettings settings, IEnumerable<AdModule> modules)
     {
         _settings = settings;
         _installPath = settings.InstallPath ?? "";
+        LoadModules(modules, settings.SelectedModule);
+    }
+
+    public void LoadModules(IEnumerable<AdModule> modules, string? selectedFileName = null)
+    {
+        Selected = null;
+        All.Clear();
         foreach (var m in modules)
         {
-            var saved = settings.Modules.TryGetValue(m.FileName, out var ms)
+            var saved = _settings.Modules.TryGetValue(m.FileName, out var ms)
                 ? ms.Presets.FirstOrDefault(p => p.Name == ms.ActivePreset)?.Values
                 : null;
             All.Add(new ModuleViewModel(m, saved));
         }
         ApplyFilter();
-        Selected = Visible.FirstOrDefault(v => v.CanRun) ?? Visible.FirstOrDefault();
+        Selected = Visible.FirstOrDefault(v =>
+                       v.FileName.Equals(selectedFileName, StringComparison.OrdinalIgnoreCase))
+                   ?? Visible.FirstOrDefault(v => v.CanRun)
+                   ?? Visible.FirstOrDefault();
+        Raise(nameof(HasModules));
+        Raise(nameof(HasNoModules));
+        CatalogChanged?.Invoke();
     }
 
     public string InstallPath { get => _installPath; set => Set(ref _installPath, value); }
@@ -196,11 +211,15 @@ public sealed class MainViewModel : Bindable
             if (!Set(ref _selected, value)) return;
             if (_selected is not null) _selected.ControlChanged += NotifySettingsChanged;
             Raise(nameof(HasSelection));
+            Raise(nameof(CanSetScreenSaver));
             Raise(nameof(SelectionIs16Bit));
         }
     }
 
     public bool HasSelection => _selected is not null;
+    public bool CanSetScreenSaver => _selected is { CanRun: true };
+    public bool HasModules => All.Count > 0;
+    public bool HasNoModules => All.Count == 0;
     public bool SelectionIs16Bit => _selected is { CanRun: false };
 
     public int RunnableCount => All.Count(m => m.CanRun);
@@ -217,20 +236,25 @@ public sealed class MainViewModel : Bindable
 
     internal void NotifySettingsChanged() => SettingsChanged?.Invoke();
 
-    public int TimeoutMinutes
-    {
-        get => _settings.TimeoutMinutes;
-        set { _settings.TimeoutMinutes = value; Raise(); }
-    }
-
-    public bool SecureResume
-    {
-        get => _settings.SecureResume;
-        set { _settings.SecureResume = value; Raise(); }
-    }
-
     private string _status = "";
     public string Status { get => _status; private set => Set(ref _status, value); }
+
+    public void SetImportedModules(string installPath, IEnumerable<AdModule> modules,
+                                   int count, int pictureCount = 0, int musicCount = 0)
+    {
+        InstallPath = installPath;
+        _settings.InstallPath = installPath;
+        LoadModules(modules, _settings.SelectedModule);
+        _settings.Save();
+        Status = $"Imported {count} module{(count == 1 ? "" : "s")}"
+               + (pictureCount > 0
+                   ? $" and {pictureCount} Art Critic picture{(pictureCount == 1 ? "" : "s")}" : "")
+               + (musicCount > 0
+                   ? $" and {musicCount} music track{(musicCount == 1 ? "" : "s")}" : "")
+               + " from your media.";
+    }
+
+    public void ReportError(string message) => Status = message;
 
     /// <summary>
     /// The whole install flow: save settings, project them into saver.cfg, and
@@ -238,7 +262,7 @@ public sealed class MainViewModel : Bindable
     /// </summary>
     public void SetAsScreenSaver()
     {
-        if (_selected is null) return;
+        if (_selected is not { CanRun: true }) return;
         try
         {
             SaveSelection();
@@ -257,13 +281,13 @@ public sealed class MainViewModel : Bindable
 
             if (OperatingSystem.IsWindows())
             {
-                Services.ScreenSaverRegistration.Install(
-                    Services.AppPaths.ScreenSaver, TimeoutMinutes * 60, SecureResume);
+                Services.ScreenSaverRegistration.Install(Services.AppPaths.ScreenSaver);
                 Status = $"{_selected.Title} is now your screensaver."
                        + (ApplyToAllUsers && _machineDefaultWritten
                           ? " Set as the default for other users too." : "");
             }
             else Status = "Settings saved (registration is Windows-only).";
+            ScreenSaverChanged?.Invoke();
         }
         catch (Exception ex)
         {

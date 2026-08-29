@@ -1,0 +1,524 @@
+#!/usr/bin/env python3
+"""Generate controls, palettes, and version resources for procedural rewrites."""
+
+from __future__ import annotations
+
+import argparse
+import struct
+from pathlib import Path
+
+
+def title_field(title: str) -> bytes:
+    encoded = title.encode("latin-1")[:14]
+    return encoded + bytes(14 - len(encoded))
+
+
+def none(title: str = "") -> bytes:
+    blob = bytearray(32)
+    blob[2:16] = title_field(title)
+    return bytes(blob)
+
+
+def checkbox(title: str, checked: bool) -> bytes:
+    blob = bytearray(32)
+    struct.pack_into("<H", blob, 0, 5)
+    blob[2:16] = title_field(title)
+    struct.pack_into("<h", blob, 24, int(checked))
+    return bytes(blob)
+
+
+def button(title: str) -> bytes:
+    blob = bytearray(32)
+    struct.pack_into("<H", blob, 0, 4)
+    blob[2:16] = title_field(title)
+    return bytes(blob)
+
+
+def number_slider(
+    title: str,
+    lower: int,
+    upper: int,
+    intervals: int,
+    start: int,
+    affix: str = "",
+    affix_mode: int = 0,
+) -> bytes:
+    blob = bytearray(56)
+    struct.pack_into("<H", blob, 0, 2)
+    blob[2:16] = title_field(title)
+    struct.pack_into("<h", blob, 24, start)
+    encoded = affix.encode("latin-1")[:5]
+    blob[32 : 32 + len(encoded)] = encoded
+    struct.pack_into("<hhhh", blob, 48, lower, upper, intervals, affix_mode)
+    return bytes(blob)
+
+
+def combo_box(title: str, labels: list[str], start: int) -> bytes:
+    blob = bytearray(32 + 16 * len(labels))
+    struct.pack_into("<H", blob, 0, 3)
+    blob[2:16] = title_field(title)
+    struct.pack_into("<hh", blob, 22, len(labels), start)
+    for index, label in enumerate(labels):
+        encoded = label.encode("latin-1")[:15]
+        offset = 32 + 16 * index
+        blob[offset : offset + len(encoded)] = encoded
+    return bytes(blob)
+
+
+def string_slider(
+    title: str, labels: list[str], bounds: list[int], start: int
+) -> bytes:
+    blob = bytearray(32 + 16 * len(labels) + 2 * len(bounds))
+    struct.pack_into("<H", blob, 0, 1)
+    blob[2:16] = title_field(title)
+    struct.pack_into("<hh", blob, 22, len(labels), start)
+    for index, label in enumerate(labels):
+        encoded = label.encode("latin-1")[:15]
+        offset = 32 + 16 * index
+        blob[offset : offset + len(encoded)] = encoded
+    for index, bound in enumerate(bounds):
+        struct.pack_into("<h", blob, 32 + 16 * len(labels) + 2 * index, bound)
+    return bytes(blob)
+
+
+def palette() -> bytes:
+    colors = [
+        (0x00, 0x00, 0x00),
+        (0xF2, 0xB3, 0x3D), (0x5B, 0xC9, 0x8B), (0x4D, 0xA3, 0xFF),
+        (0xF0, 0x6A, 0x8A), (0xD9, 0x8C, 0xFF), (0xF4, 0xF4, 0xF6),
+        (0x58, 0xD6, 0xE8), (0xF0, 0x9A, 0x55), (0xFF, 0xF1, 0x76),
+        (0x78, 0xD4, 0xA7), (0x6C, 0xB6, 0xFF), (0xFF, 0x8A, 0xA4),
+        (0xE4, 0xA7, 0xFF), (0xFF, 0xFF, 0xFF), (0x7C, 0xE7, 0xF5),
+        (0xFF, 0xB5, 0x70),
+    ]
+    colors.extend((value, value, value) for value in range(1, 240))
+    entries = bytearray()
+    for red, green, blue in colors:
+        entries.extend((red, green, blue, 0))
+    return struct.pack("<HH", 0x300, 256) + entries
+
+
+def quoted(path: Path) -> str:
+    return path.resolve().as_posix()
+
+
+def write_module(
+    output: Path, stem: str, title: str, controls: list[bytes]
+) -> None:
+    paths: list[Path] = []
+    for index, control in enumerate(controls, start=1):
+        path = output / f"{stem}-control{index}.bin"
+        path.write_bytes(control)
+        paths.append(path)
+    palette_path = output / f"{stem}-palette.bin"
+    palette_path.write_bytes(palette())
+    marker_path = output / "rewrite-marker.bin"
+    marker_path.write_bytes(b"After Dark Studio clean-room rewrite\0")
+
+    resources = "\n".join(
+        f'{index} 1000 "{quoted(path)}"'
+        for index, path in enumerate(paths, start=1)
+    )
+    rc = output / f"{stem}.rc"
+    rc.write_text(
+        f'''#include <windows.h>
+
+{resources}
+1 PAL "{quoted(palette_path)}"
+1 AD_REWRITE "{quoted(marker_path)}"
+
+1 VERSIONINFO
+FILEVERSION 0,1,0,0
+PRODUCTVERSION 0,1,0,0
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_DLL
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904E4"
+    BEGIN
+      VALUE "CompanyName", "After Dark Studio contributors\\0"
+      VALUE "FileDescription", "{title}\\0"
+      VALUE "FileVersion", "0.1.0\\0"
+      VALUE "LegalCopyright", "Independent clean-room rewrite\\0"
+      VALUE "ProductName", "After Dark Studio Classic rewrite\\0"
+      VALUE "ProductVersion", "0.1.0\\0"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x0409, 1252
+  END
+END
+''',
+        encoding="ascii",
+        newline="\n",
+    )
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("output", type=Path)
+    args = parser.parse_args()
+    args.output.mkdir(parents=True, exist_ok=True)
+
+    write_module(
+        args.output,
+        "spiral32",
+        "Spiral Gyra",
+        [
+            number_slider("Max Lines:", 20, 360, 10, 54),
+            number_slider("Min Lines:", 0, 100, 1, 28, "%", 2),
+            number_slider("Color Cycling:", 0, 100, 1, 32, "%", 2),
+            none(),
+        ],
+    )
+    write_module(
+        args.output,
+        "tunnel32",
+        "Tunnel",
+        [
+            combo_box("Direction:", ["In", "Out"], 0),
+            combo_box("Shape:", ["Rect", "R-Rect", "Random"], 1),
+            none(),
+            none(),
+        ],
+    )
+    write_module(
+        args.output,
+        "zot32",
+        "Zot!",
+        [
+            string_slider("Forkiness:", ["Few", "Forky", "Max Forky!"],
+                          [33, 67, 100], 50),
+            none(),
+            string_slider("How Often:",
+                          ["Rarely", "Sometimes", "Often", "Stormy!"],
+                          [25, 50, 75, 100], 62),
+            none(),
+        ],
+    )
+    write_module(
+        args.output,
+        "warp32",
+        "Warp!",
+        [
+            string_slider(
+                "Speed:",
+                ["Fast In", "Medium In", "Slow In", "Impulse In",
+                 "Impulse Out", "Slow Out", "Medium Out", "Fast Out"],
+                [12, 25, 38, 45, 55, 75, 88, 100],
+                0,
+            ),
+            number_slider("Stars:", 1, 200, 1, 71),
+            combo_box("Size:", ["Small", "Big", "Both"], 0),
+            checkbox("Color", False),
+        ],
+    )
+    write_module(
+        args.output,
+        "spheres32",
+        "Spheres",
+        [
+            number_slider("Max Size:", 10, 100, 100, 73, "%", 2),
+            number_slider("Offset:", 0, 10, 100, 27),
+            number_slider("Clear Every:", 1, 200, 100, 30),
+            checkbox("Clear Screen F", False),
+        ],
+    )
+    write_module(
+        args.output,
+        "stained32",
+        "Stained Glass",
+        [
+            number_slider("Complexity:", 0, 100, 1, 10, "%", 2),
+            number_slider("Duplication:", 0, 100, 1, 100, "%", 2),
+            number_slider("Color:", 0, 100, 1, 100, "%", 2),
+            none(),
+        ],
+    )
+    write_module(
+        args.output,
+        "string32",
+        "String Theory",
+        [
+            combo_box("String Groups:", ["1", "2", "3", "4"], 2),
+            string_slider(
+                "Strings:",
+                ["10", "20", "30", "40", "50", "60", "70", "80",
+                 "90", "100", "110", "120", "130", "140", "150",
+                 "Infinite"],
+                [12, 18, 24, 30, 36, 42, 48, 54, 60, 66, 72, 78, 84,
+                 90, 95, 100],
+                87,
+            ),
+            number_slider("Color Speed:", 1, 100, 100, 96, "%", 2),
+            checkbox("Clear Screen F", False),
+        ],
+    )
+    write_module(
+        args.output,
+        "photon32",
+        "Photon",
+        [
+            string_slider(
+                "Length",
+                ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
+                 "12", "14", "16", "20", "24", "28", "32"],
+                [18, 26, 33, 39, 44, 49, 54, 59, 64, 69, 74, 79, 84, 89,
+                 94, 100, 101],
+                58,
+            ),
+            string_slider(
+                "Burst Delay",
+                ["None", "1/2 sec.", "1 sec.", "2 sec.", "5 sec.",
+                 "10 sec.", "30 sec."],
+                [10, 20, 40, 60, 80, 90, 100],
+                0,
+            ),
+            checkbox("Always Centere", True),
+            combo_box("Burst", ["Mixed", "Photon", "Electron", "Proton",
+                                "Neutrino"], 0),
+        ],
+    )
+    write_module(
+        args.output,
+        "strange32",
+        "Strange Attract",
+        [
+            string_slider(
+                "Duration:",
+                ["5 seconds", "10 seconds", "15 seconds", "20 seconds",
+                 "30 seconds", "45 seconds", "1 minute", "2 minutes",
+                 "5 minutes", "10 minutes", "15 minutes", "20 minutes",
+                 "30 minutes", "45 minutes", "1 hour"],
+                [15, 20, 27, 34, 40, 47, 54, 60, 67, 74, 80, 87, 94, 100,
+                 101],
+                30,
+            ),
+            string_slider(
+                "Color Speed:",
+                ["None", "Slowest", "Slower", "Slow", "Normal", "Fast",
+                 "Faster", "Fastest"],
+                [24, 36, 48, 60, 72, 84, 94, 100],
+                66,
+            ),
+            none(),
+            none(),
+        ],
+    )
+    write_module(
+        args.output,
+        "rain32",
+        "Hard Rain",
+        [
+            number_slider("# of Drops:", 1, 9, 100, 22),
+            number_slider("Drop Size:", 5, 35, 100, 43),
+            none(),
+            checkbox("Clear Screen F", False),
+        ],
+    )
+    write_module(
+        args.output,
+        "spot32",
+        "Spotlight",
+        [
+            string_slider(
+                "Size:",
+                ["Random", "30", "40", "50", "60", "70", "80", "90",
+                 "100", "110", "120", "130", "140", "150", "160",
+                 "170", "180", "190", "200"],
+                [5, 10, 16, 22, 28, 34, 40, 46, 52, 58, 64, 70, 76, 82,
+                 87, 92, 97, 100, 101],
+                0,
+            ),
+            number_slider("Speed:", 1, 20, 1, 48),
+            number_slider("Spots:", 1, 4, 1, 44),
+            none(),
+        ],
+    )
+    write_module(
+        args.output,
+        "draino32",
+        "Down the Drain",
+        [
+            string_slider("Speed:", ["Slow", "Medium", "Fast"],
+                          [33, 67, 100], 100),
+            string_slider("Direction:", ["Clockwise", "Inward", "Counter"],
+                          [33, 67, 100], 100),
+            checkbox("Drops", True),
+            checkbox("Show Drain", True),
+        ],
+    )
+    write_module(
+        args.output,
+        "mountain32",
+        "Mountains",
+        [
+            combo_box("View:", ["Boundaries", "Webs", "Mountains",
+                                "Constructions", "Highlands", "Random"], 5),
+            combo_box("Planet:", ["Mercury", "Venus", "Earth", "Mars",
+                                  "Jupiter", "Saturn", "Uranus", "Neptune",
+                                  "Pluto", "Random"], 9),
+            number_slider("Complexity:", 3, 6, 1, 69),
+            number_slider("Zoom:", 0, 100, 100, 70),
+        ],
+    )
+    write_module(
+        args.output,
+        "vertigo32",
+        "Vertigo",
+        [
+            combo_box("Palette:", ["Smooth", "Random", "Stingray"], 2),
+            number_slider("Spiral Pitch:", 1, 100, 100, 100, "%", 2),
+            number_slider("Color Speed:", 0, 100, 100, 100, "%", 2),
+            string_slider(
+                "Delay:",
+                ["0 secs", "1 second", "2 secs", "5 secs", "10 secs",
+                 "20 secs", "30 secs", "40 secs", "50 secs", "1 minute"],
+                [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+                35,
+            ),
+        ],
+    )
+    write_module(
+        args.output,
+        "sunburst32",
+        "Sunburst",
+        [
+            string_slider("Delay:", ["Slowest", "Slow", "Medium", "Fast",
+                                      "Fastest"],
+                          [30, 50, 70, 90, 100], 60),
+            none(),
+            none(),
+            none(),
+        ],
+    )
+    write_module(
+        args.output,
+        "satori32",
+        "Satori",
+        [
+            combo_box("Display:", ["Fields", "Pools", "Rays", "Waves",
+                                   "Leaves", "Mix", "Random"], 6),
+            combo_box("Colors:", ["Arizona", "Siberia", "Tijuana", "Pacific",
+                                  "Hawaii", "Nile", "Louisiana", "Camelot",
+                                  "Colorado", "Atlantis", "Outback", "Ithaca",
+                                  "Oz", "Random"], 13),
+            string_slider("End Clarity:", ["1X1", "2X2", "4X4", "8X8",
+                                           "16X16"],
+                          [20, 40, 60, 80, 100], 0),
+            number_slider("Knots:", 1, 20, 1, 31),
+        ],
+    )
+    write_module(
+        args.output,
+        "snake32",
+        "Snake",
+        [
+            number_slider("Solution speed", 1, 9, 1, 0),
+            string_slider("Maze complexit", ["1", "2", "3", "4", "5", "6",
+                                              "7", "8", "9"],
+                          [20, 30, 40, 50, 60, 70, 80, 90, 100], 0),
+            string_slider("Pause when don", ["0 sec", "1 sec", "3 sec", "5 sec",
+                                             "10 sec", "15 sec", "30 sec", "1 min"],
+                          [14, 28, 42, 56, 70, 84, 98, 100], 0),
+            none(),
+        ],
+    )
+    write_module(
+        args.output,
+        "nirvana32",
+        "Nirvana",
+        [
+            combo_box("Color", ["Smooth", "Stripes", "Contrast", "Rainbow",
+                                "Metal", "Lines", "Enamel", "Random"], 7),
+            string_slider("Redraw Every:", ["3 min", "5 min", "10 min",
+                                             "30 min", "60 min"],
+                          [20, 40, 60, 80, 100], 57),
+            string_slider("Activity:", ["Serene", "Calm", "Alert", "Busy",
+                                         "Frenetic"],
+                          [20, 40, 60, 80, 100], 0),
+            string_slider("Change Color:", ["Never", "Rarely", "Often", "Always"],
+                          [25, 50, 75, 100], 0),
+        ],
+    )
+    write_module(
+        args.output, "gravity32", "Gravity",
+        [number_slider("Number Balls:", 1, 7, 1, 41),
+         number_slider("Size:", 10, 30, 100, 74),
+         checkbox("Clear Screen", True), none()],
+    )
+    write_module(
+        args.output, "punch32", "Punch Out",
+        [combo_box("Shape:", ["Circle", "Oval", "Square", "Rectangle", "Random"], 0),
+         number_slider("Size:", 10, 120, 100, 50),
+         number_slider("Speed:", 1, 9, 100, 100), none()],
+    )
+    write_module(
+        args.output, "worms32", "Can of Worms",
+        [string_slider("Wiggle:", ["Straight", "Weavy", "Crawly", "Wiggly"],
+                       [25, 50, 75, 100], 69),
+         number_slider("Segments:", 2, 20, 1, 70),
+         number_slider("Worms:", 1, 20, 1, 70), none()],
+    )
+    write_module(
+        args.output, "dosshell32", "DOS Shell",
+        [none("User-Unfriendl"), combo_box("Color", ["Amber", "Green", "Mono", "Programmer",
+                                     "Random"], 1),
+         string_slider("Speed", ["Pokey", "Normal", "Fast", "Demon"],
+                   [30, 60, 90, 100], 75), none("Accuracy")],
+    )
+    write_module(
+        args.output, "puzzle32", "Puzzle",
+        [combo_box("Size:", ["Small", "Medium", "Large"], 0),
+         combo_box("Speed:", ["Slow", "Medium", "Fast"], 0),
+         none("Sound"), checkbox("Invert Screen", False)],
+    )
+    write_module(
+        args.output, "globe32", "Globe",
+        [number_slider("Rotation:", -45, 45, 1, 53, " deg", 2),
+         string_slider("Speed:", ["Slowest", "Slow", "Medium", "Fast", "Fastest"],
+                       [20, 40, 60, 80, 100], 53),
+         button("Map..."), none("Mirror:")],
+    )
+    write_module(
+        args.output, "frost32", "Frost and Fire",
+        [number_slider("Size:", 10, 100, 90, 45, "%", 2),
+         combo_box("Palette:", ["Bright", "Stormy", "Gray Scale", "Ramped",
+                              "Electric", "Rainbows", "Sine", "Plasma",
+                              "Cycloid"], 0),
+         checkbox("Maximize Speed", False), none()],
+    )
+    write_module(
+        args.output, "zoom32", "Zooommm!",
+        [combo_box("Colors", ["Smooth", "Saw", "Saw2", "Saw3", "Saw4",
+                            "Ramped", "Ramped2", "Ramped3", "Electric",
+                            "Crest", "Rainbows", "Sine", "Sine2", "Sine3",
+                            "Cycloid", "iCycloid", "iCycloid2", "Oscillate",
+                            "Oscillate2", "Random", "Banded"], 0),
+         string_slider("Speed", ["Slowest", "Slowest", "Slow", "Slow",
+                                "Medium", "Medium", "Fast", "Fast", "Faster",
+                                "Faster", "Zooommin"],
+                       [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 101], 63),
+         string_slider("Delay", ["Shortest", "Shortest", "Shortest", "Shortest",
+                                "Short", "Short", "Short", "Short", "Medium",
+                                "Medium", "Medium", "Medium", "Long", "Long",
+                                "Long", "Long", "Longer", "Longer", "Longer",
+                                "Longer", "Longest"],
+                       [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65,
+                        70, 75, 80, 85, 90, 95, 100, 101], 0),
+         none()],
+    )
+    write_module(
+        args.output, "geobounc32", "GeoBounce",
+        [combo_box("Shape", ["Tetrahedron", "Cube", "Octahedron", "Dodecahedron",
+                            "Icosahedron"], 0),
+         number_slider("Size:", 10, 100, 1, 54, "%", 2),
+         number_slider("Speed:", 0, 100, 1, 28, "%", 2),
+         combo_box("Faces", ["Shading", "Colors", "Both"], 2)],
+    )
+
+
+if __name__ == "__main__":
+    main()

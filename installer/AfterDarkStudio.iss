@@ -46,7 +46,7 @@
 ; #define BundleModulesFrom "C:\Program Files (x86)\After Dark"
 
 #define AppName        "After Dark Studio"
-#define AppVersion     "0.1.0"
+#define AppVersion     "0.1.6"
 #define AppPublisher   "After Dark Studio contributors"
 #define AppExe         "AfterDark.Studio.exe"
 #define ScrName        "AfterDarkModern.scr"
@@ -116,6 +116,11 @@ Source: "{#SourceDir}\{#ScrName}"; DestDir: "{app}"; Flags: ignoreversion
 ; executable runs perfectly well from 64-bit Program Files.
 Source: "{#SourceDir}\admhost32.exe"; DestDir: "{app}"; Flags: ignoreversion
 
+; --- independent clean-room Classic rewrites -----------------------------
+; These contain no Berkeley Systems code or assets and need no ADXPL engine.
+Source: "{#SourceDir}\rewrites\*.AD"; DestDir: "{app}\modules\rewrites"; \
+  Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
+
 ; Optional copy so the screensaver appears in every user's Windows dropdown.
 ; {sys} is the native System32 in a 64-bit install, which is what our x64 .scr
 ; wants. The copy still finds admhost32.exe via the HKLM InstallDir below.
@@ -128,6 +133,24 @@ Source: "{#BundleModulesFrom}\*.AD";       DestDir: "{app}\modules"; \
     Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
 Source: "{#BundleModulesFrom}\ADXPL*.DLL"; DestDir: "{app}\modules"; \
     Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
+Source: "{#BundleModulesFrom}\PICTURES\*.BMP"; DestDir: "{app}\modules\PICTURES"; \
+  Flags: ignoreversion skipifsourcedoesntexist
+Source: "{#BundleModulesFrom}\PICTURES\*.GIF"; DestDir: "{app}\modules\PICTURES"; \
+  Flags: ignoreversion skipifsourcedoesntexist
+Source: "{#BundleModulesFrom}\PICTURES\*.JPG"; DestDir: "{app}\modules\PICTURES"; \
+  Flags: ignoreversion skipifsourcedoesntexist
+Source: "{#BundleModulesFrom}\PICTURES\*.JPEG"; DestDir: "{app}\modules\PICTURES"; \
+  Flags: ignoreversion skipifsourcedoesntexist
+Source: "{#BundleModulesFrom}\3DMINOR.MID"; DestDir: "{app}\modules\Music"; \
+  DestName: "3DMinor.MID"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "{#BundleModulesFrom}\FIREBOMB.MID"; DestDir: "{app}\modules\Music"; \
+  DestName: "FIREBOMB.MID"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "{#BundleModulesFrom}\SEAPIXIE.MID"; DestDir: "{app}\modules\Music"; \
+  DestName: "SEAPIXIE.mid"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "{#BundleModulesFrom}\BABY.MID"; DestDir: "{app}\modules\Music"; \
+  DestName: "Baby Toasters.mid"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "{#BundleModulesFrom}\TOASTERS.MID"; DestDir: "{app}\modules\Music"; \
+  DestName: "Flying Toasters.mid"; Flags: ignoreversion skipifsourcedoesntexist
 #endif
 
 [Registry]
@@ -287,14 +310,24 @@ begin
       begin
         WizardForm.StatusLabel.Caption := 'Importing ' + FindRec.Name + '...';
         WizardForm.Refresh;
-        if FileCopy(AddBackslash(SrcDir) + FindRec.Name,
-                    AddBackslash(DestDir) + FindRec.Name, False) then
+        if CopyFile(AddBackslash(SrcDir) + FindRec.Name,
+              AddBackslash(DestDir) + FindRec.Name, False) then
           Result := Result + 1;
       end;
     until not FindNext(FindRec);
   finally
     FindClose(FindRec);
   end;
+end;
+
+function CopyNamedFile(SrcDir, SrcName, DestDir, DestName: String): Integer;
+begin
+  Result := 0;
+  if not FileExists(AddBackslash(SrcDir) + SrcName) then Exit;
+  ForceDirectories(DestDir);
+  if CopyFile(AddBackslash(SrcDir) + SrcName,
+              AddBackslash(DestDir) + DestName, False) then
+    Result := 1;
 end;
 
 { Import the user's own screen savers.
@@ -313,6 +346,15 @@ begin
 
   N := CopyPattern(FoundAD4Dir, ModulesDir(), '*.AD');
   CopyPattern(FoundAD4Dir, ModulesDir(), 'ADXPL*.DLL');
+  CopyPattern(FoundAD4Dir + '\PICTURES', ModulesDir() + '\PICTURES', '*.BMP');
+  CopyPattern(FoundAD4Dir + '\PICTURES', ModulesDir() + '\PICTURES', '*.GIF');
+  CopyPattern(FoundAD4Dir + '\PICTURES', ModulesDir() + '\PICTURES', '*.JPG');
+  CopyPattern(FoundAD4Dir + '\PICTURES', ModulesDir() + '\PICTURES', '*.JPEG');
+  CopyNamedFile(FoundAD4Dir, '3DMINOR.MID', ModulesDir() + '\Music', '3DMinor.MID');
+  CopyNamedFile(FoundAD4Dir, 'FIREBOMB.MID', ModulesDir() + '\Music', 'FIREBOMB.MID');
+  CopyNamedFile(FoundAD4Dir, 'SEAPIXIE.MID', ModulesDir() + '\Music', 'SEAPIXIE.mid');
+  CopyNamedFile(FoundAD4Dir, 'BABY.MID', ModulesDir() + '\Music', 'Baby Toasters.mid');
+  CopyNamedFile(FoundAD4Dir, 'TOASTERS.MID', ModulesDir() + '\Music', 'Flying Toasters.mid');
   Result := N;
 
   if (FoundStarry <> '') and (CompareText(FoundStarry, FoundAD4Dir) <> 0) then

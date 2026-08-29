@@ -29,7 +29,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from adlib import (SYSTEM_DLLS, Unsupported,  # noqa: E402
+from adlib import (Unsupported, is_system_dll,  # noqa: E402
                    is_module_entry, open_image)
 
 SCAN_EXTS = {".ad", ".scr", ".dll", ".adm"}
@@ -61,7 +61,7 @@ def analyse(path: str) -> dict:
     rec["export_count"] = len(exports)
     rec["has_module_export"] = any(is_module_entry(e) for e in exports)
     rec["engine_dlls"] = {k: v for k, v in img.imports().items()
-                          if k.lower() not in SYSTEM_DLLS}
+                          if not is_system_dll(k)}
     rec["resources"] = img.resource_types()
     rec["version"] = img.version_strings()
 
